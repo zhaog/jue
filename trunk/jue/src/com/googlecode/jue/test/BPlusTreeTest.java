@@ -1,6 +1,10 @@
 package com.googlecode.jue.test;
 
+import java.util.Random;
+
+import com.googlecode.jue.bplustree.BNode;
 import com.googlecode.jue.bplustree.BPlusTree;
+import com.googlecode.jue.bplustree.TreeCallBack;
 
 
 public class BPlusTreeTest {
@@ -9,7 +13,7 @@ public class BPlusTreeTest {
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		BPlusTree<Integer, String> tree = new BPlusTree<Integer, String>(4);
+		BPlusTree<Integer, String> tree = new BPlusTree<Integer, String>(2);
 		System.out.println(tree);
 		
 //		System.out.println("=====put 1:'1'");
@@ -32,10 +36,58 @@ public class BPlusTreeTest {
 //		System.out.println("=====search 1");
 //		System.out.println(tree.search(1));
 //		
-		System.out.println("=====put 1~100");
-		for (int i = 1; i <= 100; ++i) {
+		System.out.println("=====put 1~20");
+		TreeCallBack<Integer, String> callBack = new TreeCallBack<Integer, String>() {
+
+			@Override
+			public void nodeUpdated(BNode<Integer, String> node) {
+				System.out.println("nodeUpdated:" + node.toString());
+			}
+
+			@Override
+			public void nodeSplited(BNode<Integer, String> leftNode,
+					BNode<Integer, String> rightNode) {
+				System.out.println("nodeSplited:\n" +
+									"\tleftNode:" + leftNode.toString() +
+									"\n\trightNode:" + rightNode.toString());
+			}
+
+			@Override
+			public void nodeMerge(BNode<Integer, String> mergedNode) {
+				System.out.println("nodeMerge:" + mergedNode.toString());
+			}
+
+			@Override
+			public void completed() {
+				System.out.println("completed:");
+			}
+
+			@Override
+			public void rootChanged(BNode<Integer, String> rootNode) {
+				System.out.println("rootChanged:" + rootNode);
+			}
+
+			@Override
+			public void nodeMoved(BNode<Integer, String> leftNode,
+					BNode<Integer, String> rightNode) {
+				System.out.println("nodeMove:\n" +
+									"\tleftNode:" + leftNode.toString() +
+									"\n\trightNode:" + rightNode.toString());
+			}
+		};
+		for (int i = 1; i <= 20; ++i) {
 			System.out.println(">>>>put " + i + ":'" + i + "'");
+//			tree.put(i, i + "", callBack);
 			tree.put(i, i + "");
+//			System.out.println(tree);
+		}
+		System.out.println(tree);
+		
+//		System.out.println("=====delete 1~20");
+		for (int i = 10; i >0; --i) {
+			int j = new Random().nextInt(20);
+			System.out.println(">>>>delete " + j);
+			tree.delete(j, callBack);
 			System.out.println(tree);
 		}
 		
@@ -59,15 +111,15 @@ public class BPlusTreeTest {
 //		Integer[] array = new Integer[]{2, 4, 6, 8, 10};
 //		System.out.println(searchKey(array, 5, false));
 		
-		System.out.println("=====put 1~100~");
-		for (int i = 1; i <= 100; ++i) {
-			System.out.println(">>>>put " + i + ":'" + i + "'");
-			if (i == 6) {
-				System.out.println("dadf");
-			}
-			tree.put(i, i + "~");
-			System.out.println(tree);
-		}
+//		System.out.println("=====put 1~100~");
+//		for (int i = 1; i <= 100; ++i) {
+//			System.out.println(">>>>put " + i + ":'" + i + "'");
+//			if (i == 6) {
+//				System.out.println("dadf");
+//			}
+//			tree.put(i, i + "~");
+//			System.out.println(tree);
+//		}
 //		System.out.println(tree.search(6));
 	}
 	

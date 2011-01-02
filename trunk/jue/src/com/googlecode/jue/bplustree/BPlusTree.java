@@ -85,7 +85,18 @@ public class BPlusTree<K extends Comparable<K>, V extends Serializable> {
 	 * @return
 	 */
 	public boolean put(K key, V value) {
-		return getRootNode().put(key, value);
+		return put(key, value, null);
+	}
+	
+	/**
+	 * 插入新键值
+	 * @param key
+	 * @param value
+	 * @param callback
+	 * @return
+	 */
+	public boolean put(K key, V value, TreeCallBack<K, V> callback) {
+		return getRootNode().put(key, value, callback);
 	}
 	
 	/**
@@ -103,7 +114,16 @@ public class BPlusTree<K extends Comparable<K>, V extends Serializable> {
 	 * @return
 	 */
 	public boolean delete(K key) {
-		return getRootNode().delete(key);
+		return getRootNode().delete(key, null);
+	}
+	
+	/**
+	 * 删除对应的键和值
+	 * @param key
+	 * @return
+	 */
+	public boolean delete(K key, TreeCallBack<K, V> callback) {
+		return getRootNode().delete(key, callback);
 	}
 
 	@Override
