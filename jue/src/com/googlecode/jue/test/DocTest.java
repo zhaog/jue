@@ -1,12 +1,11 @@
 package com.googlecode.jue.test;
 
-import org.junit.Assert;
-
-import com.googlecode.jue.DocArray;
-import com.googlecode.jue.DocException;
-import com.googlecode.jue.DocObject;
-
+import junit.framework.Assert;
 import junit.framework.TestCase;
+
+import com.googlecode.jue.doc.DocArray;
+import com.googlecode.jue.doc.DocException;
+import com.googlecode.jue.doc.DocObject;
 
 
 public class DocTest extends TestCase{
@@ -15,11 +14,11 @@ public class DocTest extends TestCase{
 		String arrayJson = "[{a:1},{b:2}]";
 		try {
 			DocArray docArray = new DocArray(arrayJson);
-//			Assert.assertEquals(arrayJson, docArray.toString());
+			Assert.assertEquals(1, docArray.getDocObject(0).getInt("a"));
 			
 			DocObject docObj = new DocObject(json);
 			docObj.put("array", docArray);
-//			Assert.assertEquals(json, docObj.toString());
+			Assert.assertEquals(1, docObj.getInt("a"));
 			
 			System.out.println(docArray.toString());
 			System.out.println(docObj.toString());
