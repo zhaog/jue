@@ -45,21 +45,18 @@ public class BPlusTree<K extends Comparable<K>, V extends Serializable> {
 	public BPlusTree(int m) {
 		super();
 		this.m = m;
+		init();
 	}
 
 	/**
-	 * 获取根节点
-	 * @return
+	 * 初始化
 	 */
-	public BNode<K, V> getRootNode() {
-		if (rootNode == null) {
-			rootNode = new BNode<K, V>(this, this.m, true);
-			firstLeafNode = rootNode;
-			lastLeafNode = rootNode;
-			treeLevel = 1;
-			nodeSum = 1;
-		}
-		return rootNode;
+	private void init() {
+		rootNode = new BNode<K, V>(this, this.m, true);
+		firstLeafNode = rootNode;
+		lastLeafNode = rootNode;
+		treeLevel = 1;
+		nodeSum = 1;
 	}
 
 	/**
@@ -116,7 +113,7 @@ public class BPlusTree<K extends Comparable<K>, V extends Serializable> {
 	 * @return
 	 */
 	public boolean put(K key, V value, TreeCallBack<K, V> callback) {
-		return getRootNode().put(key, value, callback);
+		return rootNode.put(key, value, callback);
 	}
 	
 	/**
@@ -125,7 +122,7 @@ public class BPlusTree<K extends Comparable<K>, V extends Serializable> {
 	 * @return
 	 */
 	public V get(K key) {
-		return getRootNode().search(key);
+		return rootNode.search(key);
 	}
 	
 	/**
@@ -134,7 +131,7 @@ public class BPlusTree<K extends Comparable<K>, V extends Serializable> {
 	 * @return
 	 */
 	public boolean delete(K key) {
-		return getRootNode().delete(key, null);
+		return delete(key, null);
 	}
 	
 	/**
@@ -143,13 +140,13 @@ public class BPlusTree<K extends Comparable<K>, V extends Serializable> {
 	 * @return
 	 */
 	public boolean delete(K key, TreeCallBack<K, V> callback) {
-		return getRootNode().delete(key, callback);
+		return rootNode.delete(key, callback);
 	}
 
 	@Override
 	public String toString() {
 		StringBuilder nodeStr = new StringBuilder();
-		getRootNode().printNode(0, nodeStr);
+		rootNode.printNode(0, nodeStr);
 		StringBuilder sb = new StringBuilder();
 		sb.append("tree:{keySum:").append(keySum)
 			.append(", nodeSum:").append(nodeSum)

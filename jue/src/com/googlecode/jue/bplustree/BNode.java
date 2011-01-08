@@ -2,6 +2,7 @@ package com.googlecode.jue.bplustree;
 
 import java.io.Serializable;
 import java.lang.reflect.Array;
+import java.util.Arrays;
 
 
 /**
@@ -91,6 +92,10 @@ public class BNode<K extends Comparable<K>, V extends Serializable> {
 		return prevNode;
 	}
 
+	public InnerNode[] getInnerNodes() {
+		return Arrays.copyOf(innerNodes, this.count);
+	}
+
 	/**
 	 * 添加关键字
 	 * @param key
@@ -98,7 +103,7 @@ public class BNode<K extends Comparable<K>, V extends Serializable> {
 	 * @param callback
 	 * @return
 	 */
-	public boolean put(K key, V value, TreeCallBack<K, V> callback) {
+	boolean put(K key, V value, TreeCallBack<K, V> callback) {
 		PutReturnValue pValue = putImpl(new InnerNode(key, value), callback);
 		boolean success = pValue.success;
 		// 达到根节点，但是还需要向上添加键，创建新的根节点
@@ -366,7 +371,7 @@ public class BNode<K extends Comparable<K>, V extends Serializable> {
 	 * @param callback
 	 * @return
 	 */
-	public boolean delete(K key, TreeCallBack<K, V> callback) {
+	boolean delete(K key, TreeCallBack<K, V> callback) {
 		DeleteReturnValue dValue = deleteImpl(key, callback);
 		boolean success = dValue.success;
 		// 子节点合并导致根节点为空
@@ -785,7 +790,7 @@ public class BNode<K extends Comparable<K>, V extends Serializable> {
 	* @author noah
 	*
 	*/
-	private final class InnerNode {
+	public final class InnerNode {
 
 		/**
 		* 关键字
