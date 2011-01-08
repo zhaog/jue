@@ -48,6 +48,11 @@ public class BNode<K extends Comparable<K>, V extends Serializable> {
 	private BNode<K, V> nextNode;
 	
 	/**
+	* 左兄弟节点
+	*/
+	private BNode<K, V> prevNode;
+	
+	/**
 	* 最小节点数
 	* @param m
 	*/
@@ -78,6 +83,14 @@ public class BNode<K extends Comparable<K>, V extends Serializable> {
 		return this.count < this.min;
 	}
 	
+	public BNode<K, V> getNextNode() {
+		return nextNode;
+	}
+
+	public BNode<K, V> getPrevNode() {
+		return prevNode;
+	}
+
 	/**
 	 * 添加关键字
 	 * @param key
@@ -291,7 +304,16 @@ public class BNode<K extends Comparable<K>, V extends Serializable> {
 		// 更新兄弟指针
 		if(isLeaf()) {
 			newNode.nextNode = this.nextNode;
+			newNode.prevNode = this;
+			if (this.nextNode != null) {
+				this.nextNode.prevNode = newNode;
+				
+			}
 			this.nextNode = newNode;
+			//更新最后一个叶节点
+			if (tree.lastLeafNode == this) {
+				tree.lastLeafNode = newNode;
+			}
 		}
 		PutReturnValue ret = new PutReturnValue();
 		ret.newInnerNode = newInnerNode;
@@ -497,6 +519,15 @@ public class BNode<K extends Comparable<K>, V extends Serializable> {
 			}
 			// 更新左子树的键数量
 			leftNode.count += rightNode.count;
+			// 更新兄弟节点
+			leftNode.nextNode = rightNode.nextNode;
+			if (rightNode.nextNode != null) {
+				rightNode.nextNode.prevNode = leftNode;
+			}
+			//更新最后一个叶节点
+			if (tree.lastLeafNode == rightNode) {
+				tree.lastLeafNode = leftNode;
+			}
 		} else {
 			// 将当前键下移到左子树的最右位置
 			leftNode.innerNodes[leftNode.count] = this.innerNodes[keyIndex];

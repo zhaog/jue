@@ -121,6 +121,20 @@ public class BPlusTreeTest {
 //			System.out.println(tree);
 //		}
 //		System.out.println(tree.search(6));
+		
+		System.out.println("=======顺序遍历");
+		BNode<Integer, String> firstNode = tree.getFirstLeafNode();
+		do {
+			System.out.println(firstNode);
+			firstNode = firstNode.getNextNode();
+		} while (firstNode != null);
+		
+		System.out.println("=======倒序遍历");
+		BNode<Integer, String> lastNode = tree.getLastLeafNode();
+		do {
+			System.out.println(lastNode);
+			lastNode = lastNode.getPrevNode();
+		} while (lastNode != null);
 	}
 	
 	private static int searchKey(Integer[] array, Integer key, boolean foundEquel) {

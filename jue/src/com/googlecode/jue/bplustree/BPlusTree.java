@@ -13,6 +13,16 @@ public class BPlusTree<K extends Comparable<K>, V extends Serializable> {
 	private BNode<K, V> rootNode;
 	
 	/**
+	 * 第一个叶节点，用于以链式方式遍历所有叶节点
+	 */
+	private BNode<K, V> firstLeafNode;
+	
+	/**
+	 * 最后一个叶节点，用于以链式方式倒序遍历所有叶节点
+	 */
+	BNode<K, V> lastLeafNode;
+
+	/**
 	 * 树的高度
 	 */
 	int treeLevel;
@@ -44,6 +54,8 @@ public class BPlusTree<K extends Comparable<K>, V extends Serializable> {
 	public BNode<K, V> getRootNode() {
 		if (rootNode == null) {
 			rootNode = new BNode<K, V>(this, this.m, true);
+			firstLeafNode = rootNode;
+			lastLeafNode = rootNode;
 			treeLevel = 1;
 			nodeSum = 1;
 		}
@@ -76,6 +88,14 @@ public class BPlusTree<K extends Comparable<K>, V extends Serializable> {
 
 	public int getTreeLevel() {
 		return treeLevel;
+	}
+
+	public BNode<K, V> getFirstLeafNode() {
+		return firstLeafNode;
+	}
+
+	public BNode<K, V> getLastLeafNode() {
+		return lastLeafNode;
 	}
 
 	/**
