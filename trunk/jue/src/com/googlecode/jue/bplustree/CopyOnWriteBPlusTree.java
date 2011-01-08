@@ -1,0 +1,152 @@
+/**
+ * 
+ */
+package com.googlecode.jue.bplustree;
+
+import java.io.Serializable;
+import java.util.concurrent.locks.ReentrantLock;
+
+/**
+ * @author noah
+ * 实现Copy-on-write的B+树，支持并发访问
+ */
+public class CopyOnWriteBPlusTree<K extends Comparable<K>, V extends Serializable> {
+	/**
+	 * 访问锁
+	 */
+    private final ReentrantLock lock = new ReentrantLock();
+
+    /**
+     * 实际操作的树对象
+     */
+    private volatile BPlusTree<K, V> tree;
+    
+    /**
+     * 构造一颗空B+树
+     * @param m 节点的最小关键字数量
+     */
+    public CopyOnWriteBPlusTree(int m) {
+    	tree = new BPlusTree<K, V>(m);
+    }
+    
+    /**
+	 * 返回最小关键字数
+	 * @return
+	 */
+	public int getM() {
+		return tree.getM();
+	}
+	
+	public int getKeySum() {
+		return tree.getKeySum();
+	}
+
+	public int getNodeSum() {
+		return tree.getNodeSum();
+	}
+
+	public int getTreeLevel() {
+		return tree.getTreeLevel();
+	}
+
+	public BNode<K, V> getFirstLeafNode() {
+		return tree.getFirstLeafNode();
+	}
+
+	public BNode<K, V> getLastLeafNode() {
+		return tree.getLastLeafNode();
+	}
+
+	/**
+	 * 插入新键值
+	 * @param key
+	 * @param value
+	 * @return
+	 */
+	public boolean put(K key, V value) {
+		return put(key, value, null);
+	}
+	
+	/**
+	 * 插入新键值
+	 * @param key
+	 * @param value
+	 * @param callback
+	 * @return
+	 */
+	public boolean put(K key, V value, TreeCallBack<K, V> callback) {
+		final ReentrantLock lock = this.lock;
+		lock.lock();
+		try {
+			BPlusTree<K, V> newTree = createNewTree();
+			// 在新的树节点上进行操作
+			boolean result = newTree.put(key, value, callback);
+			// 替换原先的树
+			tree = newTree;
+		    return result;
+		} finally {
+		    lock.unlock();
+		}
+	}
+	
+	/**
+	 * 复制当前树
+	 * @return
+	 */
+	private BPlusTree<K, V> createNewTree() {
+		BPlusTree<K, V> newTree = new BPlusTree<K, V>(getM());
+		//遍历叶节点
+		BNode<K, V> node = tree.getFirstLeafNode();
+		do {
+			BNode<K, V>.InnerNode[] innerNodes = node.getInnerNodes();
+			for (int i = 0; i < innerNodes.length; ++i) {
+				newTree.put(innerNodes[i].getKey(), innerNodes[i].getValue());
+			}
+			node = node.getNextNode();
+		} while (node != null);
+		return newTree;
+	}
+
+	/**
+	 * 查找对应值
+	 * @param key
+	 * @return
+	 */
+	public V get(K key) {
+		return tree.get(key);
+	}
+	
+	/**
+	 * 删除对应的键和值
+	 * @param key
+	 * @return
+	 */
+	public boolean delete(K key) {
+		return delete(key, null);
+	}
+	
+	/**
+	 * 删除对应的键和值
+	 * @param key
+	 * @return
+	 */
+	public boolean delete(K key, TreeCallBack<K, V> callback) {
+		final ReentrantLock lock = this.lock;
+		lock.lock();
+		try {
+			BPlusTree<K, V> newTree = createNewTree();
+			// 在新的树节点上进行操作
+			boolean result = newTree.delete(key, callback);
+			// 替换原先的树
+			tree = newTree;
+		    return result;
+		} finally {
+		    lock.unlock();
+		}
+	}
+
+	@Override
+	public String toString() {
+		return tree.toString();
+	}
+}

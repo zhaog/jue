@@ -3,7 +3,7 @@ package com.googlecode.jue.test;
 import java.util.Random;
 
 import com.googlecode.jue.bplustree.BNode;
-import com.googlecode.jue.bplustree.BPlusTree;
+import com.googlecode.jue.bplustree.CopyOnWriteBPlusTree;
 import com.googlecode.jue.bplustree.TreeCallBack;
 
 
@@ -13,7 +13,8 @@ public class BPlusTreeTest {
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		BPlusTree<Integer, String> tree = new BPlusTree<Integer, String>(2);
+//		BPlusTree<Integer, String> tree = new BPlusTree<Integer, String>(2);
+		CopyOnWriteBPlusTree<Integer, String> tree = new CopyOnWriteBPlusTree<Integer, String>(2);
 		System.out.println(tree);
 		
 //		System.out.println("=====put 1:'1'");
