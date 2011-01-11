@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.zip.Checksum;
 
 import com.googlecode.jue.LRUCache;
 
@@ -49,23 +50,29 @@ public class BlockFileChannel {
 	private LRUCache<Long, byte[]> cache;
 
 	/**
+	 * 校验码生成器
+	 */
+	private ChecksumGenerator checksumGenerator;
+	/**
 	 * 构造一个BlockFileChannel
 	 * @param file 文件对象
 	 * @param blockSize 快大小
+	 * @param checksumGenerator 校验码生成器
 	 * @throws FileNotFoundException
 	 */
-	public BlockFileChannel(File file, int blockSize) throws FileNotFoundException {
-		this(file, blockSize, false);
+	public BlockFileChannel(File file, int blockSize, ChecksumGenerator checksumGenerator) throws FileNotFoundException {
+		this(file, blockSize, false, checksumGenerator);
 	}
 	
 	/**
 	 * 构造一个BlockFileChannel
 	 * @param filePath 文件路径
 	 * @param blockSize 快大小
+	 * @param checksumGenerator 校验码生成器
 	 * @throws FileNotFoundException
 	 */
-	public BlockFileChannel(String filePath, int blockSize) throws FileNotFoundException {
-		this(filePath, blockSize, false);
+	public BlockFileChannel(String filePath, int blockSize, ChecksumGenerator checksumGenerator) throws FileNotFoundException {
+		this(filePath, blockSize, false, checksumGenerator);
 	}
 	
 	/**
@@ -73,10 +80,11 @@ public class BlockFileChannel {
 	 * @param filePath 文件路径
 	 * @param blockSize 块大小
 	 * @param blockCache 是否缓存块
+	 * @param checksumGenerator 校验码生成器
 	 * @throws FileNotFoundException 文件不存在
 	 */
-	public BlockFileChannel(String filePath, int blockSize, boolean blockCache) throws FileNotFoundException {
-		this(new File(filePath), blockSize, blockCache);
+	public BlockFileChannel(String filePath, int blockSize, boolean blockCache, ChecksumGenerator checksumGenerator) throws FileNotFoundException {
+		this(new File(filePath), blockSize, blockCache, checksumGenerator);
 	}
 	
 	/**
@@ -84,31 +92,50 @@ public class BlockFileChannel {
 	 * @param file 文件对象
 	 * @param blockSize 块大小
 	 * @param blockCache 是否缓存块
+	 * @param checksumGenerator 校验码生成器
 	 * @throws FileNotFoundException 文件不存在
 	 */
-	public BlockFileChannel(File file, int blockSize, boolean blockCache) throws FileNotFoundException {
+	public BlockFileChannel(File file, int blockSize, boolean blockCache, ChecksumGenerator checksumGenerator) throws FileNotFoundException {
 		super();
 		RandomAccessFile raf = new RandomAccessFile(file, "rw");
 		fileChannel = raf.getChannel();
 		this.blockSize = blockSize;
 		this.blockCache = blockCache;
+		this.checksumGenerator = checksumGenerator;
 		if (blockCache) {
 			cache = new LRUCache<Long, byte[]>(MAX_CAPACITY);
 		}
 	}
 	
-	public int read(byte[] data, boolean checksum) throws IOException {
-		// 当前的文件位置
-		long pos = fileChannel.position();
+	/**
+	 * 读取数据到字节数组中
+	 * @param data 存储数据的字节数组
+	 * @param position 读取位置
+	 * @param checksum 是否要校验数据
+	 * @return 返回读取的数据长度
+	 * @throws IOException 文件读取异常
+	 * @throws ChecksumException 校验错误抛出的异常
+	 */
+	public int read(byte[] data, long position, boolean checksum) throws IOException, ChecksumException {
 		// 需要读取的数据量
 		int size = data.length;
+		// 读取的数据长度
+		int count = 0;
 		// 获取需要读取的数据对应的文件块的位置
-		long[] blockIndexes = getBlockIndexes(pos, size);
+		long[] blockIndexes = getBlockIndexes(position, size);
 		for (int i = 0; i < blockIndexes.length; ++i) {
 			byte[] b = getBlockData(blockIndexes[i], checksum);
-			// TODO 将读出的数据拷贝到data数组中
+			// 要从块数组中读取的字节数
+			int c = 0;
+			if (i != blockIndexes.length - 1) {
+				c = b.length;
+			} else { // 最后一块文件块，未必需要读取全部
+				c = size - count;
+			}
+			count += c;
+			System.arraycopy(b, 0, data, count, c);
 		}
-		return 0;
+		return count;
 	}
 	
 	/**
@@ -117,8 +144,9 @@ public class BlockFileChannel {
 	 * @param checksum 是否需要校验数据
 	 * @return
 	 * @throws IOException 
+	 * @throws ChecksumException 
 	 */
-	private byte[] getBlockData(long blockIndex, boolean checksum) throws IOException {
+	private byte[] getBlockData(long blockIndex, boolean checksum) throws IOException, ChecksumException {
 		byte[] data = null;
 		// 从缓存中获取该文件块
 		if (blockCache) {
@@ -147,7 +175,13 @@ public class BlockFileChannel {
 			buffer.get(data);
 			// 是否需要校验
 			if (checksum) {
-				// TODO 执行校验
+				Checksum cksum = checksumGenerator.createChecksum();
+				cksum.update(data, 0, data.length);
+				long chsum2 = cksum.getValue();
+				// 校验码错误
+				if (chsum != chsum2) {
+					throw new ChecksumException();
+				}
 			}
 			
 		}
@@ -159,14 +193,19 @@ public class BlockFileChannel {
 	 * @param pos 文件位置
 	 * @param size 要获取的长度
 	 * @return
+	 * @throws IOException 
 	 */
-	private long[] getBlockIndexes(long pos, int size) {
+	private long[] getBlockIndexes(long pos, int size) throws IOException {
 		// 起始文件块的位置
 		long startBlockIndex = pos / blockSize;
 		// 数据的结束位置
 		long endPos = pos + size;
 		// 结束文件块的位置
 		long endBlockIndex = endPos / blockSize;
+		// 超出文件
+		if (endBlockIndex >= fileChannel.size()) {
+			throw new IOException("out of file");
+		}
 		// 需要读取的文件块的个数
 		int count = (int) (endBlockIndex - startBlockIndex + 1);
 		// 获取各文件块位置
@@ -177,8 +216,16 @@ public class BlockFileChannel {
 		return indexes;
 	}
 
-	public int read(ByteBuffer dst, long position) throws IOException {
-		return fileChannel.read(dst, position);
+	/**
+	 * 从文件当前位置读取
+	 * @param data 存储数据的字节数组
+	 * @param checksum 是否要校验数据
+	 * @return 返回读取的数据长度
+	 * @throws IOException 文件读取异常
+	 * @throws ChecksumException 校验错误抛出的异常
+	 */
+	public int read(byte[] data, boolean checksum) throws IOException, ChecksumException {
+		return read(data, fileChannel.position(), checksum);
 	}
 	
 }
