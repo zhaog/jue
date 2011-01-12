@@ -40,6 +40,11 @@ public class BlockFileChannel {
 	private final int blockSize;
 	
 	/**
+	 * 文件块中实际存储的数据大小
+	 */
+	private final int blockDataSize;
+	
+	/**
 	 * 是否缓存文件块
 	 */
 	private boolean blockCache;
@@ -100,6 +105,11 @@ public class BlockFileChannel {
 		RandomAccessFile raf = new RandomAccessFile(file, "rw");
 		fileChannel = raf.getChannel();
 		this.blockSize = blockSize;
+		this.blockDataSize = blockSize - CHECKSUM_SIZE;
+		// 文件块小于校验码大小
+		if (this.blockDataSize <= 0) {
+			throw new IllegalArgumentException("too small block size");
+		}
 		this.blockCache = blockCache;
 		this.checksumGenerator = checksumGenerator;
 		if (blockCache) {
@@ -117,6 +127,11 @@ public class BlockFileChannel {
 	 * @throws ChecksumException 校验错误抛出的异常
 	 */
 	public int read(byte[] data, long position, boolean checksum) throws IOException, ChecksumException {
+		long mod = position % blockSize;
+		// 读取位置处于校验码的位置
+		if (mod < CHECKSUM_SIZE) {
+			throw new IllegalArgumentException("can not read checksum data");
+		}
 		// 需要读取的数据量
 		int size = data.length;
 		// 读取的数据长度
@@ -127,13 +142,18 @@ public class BlockFileChannel {
 			byte[] b = getBlockData(blockIndexes[i], checksum);
 			// 要从块数组中读取的字节数
 			int c = 0;
-			if (i != blockIndexes.length - 1) {
+			// 要从数据块中读取的起始位置
+			int srcpos = 0;
+			if (i == 0) {
+				srcpos = (int) (mod - CHECKSUM_SIZE);
+				c = b.length - srcpos;
+			} else if (i != blockIndexes.length - 1) {
 				c = b.length;
 			} else { // 最后一块文件块，未必需要读取全部
 				c = size - count;
 			}
 			count += c;
-			System.arraycopy(b, 0, data, count, c);
+			System.arraycopy(b, srcpos, data, count, c);
 		}
 		return count;
 	}
@@ -183,6 +203,10 @@ public class BlockFileChannel {
 					throw new ChecksumException();
 				}
 			}
+			if (blockCache) {
+				// 存入缓存
+				cache.put(blockIndex, data);
+			}
 			
 		}
 		return data;
@@ -198,13 +222,29 @@ public class BlockFileChannel {
 	private long[] getBlockIndexes(long pos, int size) throws IOException {
 		// 起始文件块的位置
 		long startBlockIndex = pos / blockSize;
-		// 数据的结束位置
-		long endPos = pos + size;
-		// 结束文件块的位置
-		long endBlockIndex = endPos / blockSize;
+		// 最后一个文件块的索引位置
+		long lastBlockIndex = (long) Math.ceil((double)fileChannel.size() / blockSize);
+		// 超出文件块
+		if (startBlockIndex > lastBlockIndex) {
+			throw new IOException("out of file block");
+		}
+		// 确定结束的块位置
+		long endBlockIndex = 0;
+		long m = blockSize - pos % blockSize;
+		long sz = size;
+		sz -= m;
+		if (sz <= 0) {
+			endBlockIndex = startBlockIndex;
+		} else {
+			// 之后需要再读取的块数
+			long count = sz / this.blockDataSize + 1;
+			// 结束文件块的位置
+			endBlockIndex = startBlockIndex + count;
+		}
+		
 		// 超出文件
-		if (endBlockIndex >= fileChannel.size()) {
-			throw new IOException("out of file");
+		if (endBlockIndex > lastBlockIndex) {
+			endBlockIndex = lastBlockIndex;
 		}
 		// 需要读取的文件块的个数
 		int count = (int) (endBlockIndex - startBlockIndex + 1);
@@ -226,6 +266,18 @@ public class BlockFileChannel {
 	 */
 	public int read(byte[] data, boolean checksum) throws IOException, ChecksumException {
 		return read(data, fileChannel.position(), checksum);
+	}
+	
+	
+	public int write(byte[] data, long position) throws IOException {
+		long fileSize = fileChannel.size();
+		// 写入的位置和文件尾部之间，超过了一个block块
+		if (position - fileSize >= blockSize) {
+			throw new IOException("out of file block");
+		}
+		// TODO
+		
+		return 0;
 	}
 	
 }
