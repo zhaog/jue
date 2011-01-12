@@ -132,12 +132,12 @@ public class BlockFileChannel {
 		if (mod < CHECKSUM_SIZE) {
 			throw new IllegalArgumentException("can not read checksum data");
 		}
-		// 需要读取的数据量
-		int size = data.length;
+		// 最大读取的数据量
+		int maxSize = data.length;
 		// 读取的数据长度
 		int count = 0;
 		// 获取需要读取的数据对应的文件块的位置
-		long[] blockIndexes = getBlockIndexes(position, size);
+		long[] blockIndexes = getReadBlockIndexes(position, maxSize);
 		for (int i = 0; i < blockIndexes.length; ++i) {
 			byte[] b = getBlockData(blockIndexes[i], checksum);
 			// 要从块数组中读取的字节数
@@ -150,7 +150,7 @@ public class BlockFileChannel {
 			} else if (i != blockIndexes.length - 1) {
 				c = b.length;
 			} else { // 最后一块文件块，未必需要读取全部
-				c = size - count;
+				c = maxSize - count;
 			}
 			count += c;
 			System.arraycopy(b, srcpos, data, count, c);
@@ -219,7 +219,7 @@ public class BlockFileChannel {
 	 * @return
 	 * @throws IOException 
 	 */
-	private long[] getBlockIndexes(long pos, int size) throws IOException {
+	private long[] getReadBlockIndexes(long pos, int size) throws IOException {
 		// 起始文件块的位置
 		long startBlockIndex = pos / blockSize;
 		// 最后一个文件块的索引位置
@@ -270,14 +270,51 @@ public class BlockFileChannel {
 	
 	
 	public int write(byte[] data, long position) throws IOException {
+		long mod = position % blockSize;
+		// 读取位置处于校验码的位置
+		if (mod < CHECKSUM_SIZE) {
+			throw new IllegalArgumentException("can not write checksum data");
+		}
 		long fileSize = fileChannel.size();
 		// 写入的位置和文件尾部之间，超过了一个block块
 		if (position - fileSize >= blockSize) {
 			throw new IOException("out of file block");
 		}
+		long[] blockIndexes = getWriteBlockIndexes(position, data.length);
 		// TODO
-		
 		return 0;
 	}
 	
+	/**
+	 * 获取即将写入的数据对应的文件块的位置
+	 * @param pos 文件位置
+	 * @param size 要获取的长度
+	 * @return
+	 * @throws IOException 
+	 */
+	private long[] getWriteBlockIndexes(long pos, int size) throws IOException {
+		// 起始文件块的位置
+		long startBlockIndex = pos / blockSize;
+		// 确定结束的块位置
+		long endBlockIndex = 0;
+		long m = blockSize - pos % blockSize;
+		long sz = size;
+		sz -= m;
+		if (sz <= 0) {
+			endBlockIndex = startBlockIndex;
+		} else {
+			// 之后需要再读取的块数
+			long count = sz / this.blockDataSize + 1;
+			// 结束文件块的位置
+			endBlockIndex = startBlockIndex + count;
+		}
+		// 需要读取的文件块的个数
+		int count = (int) (endBlockIndex - startBlockIndex + 1);
+		// 获取各文件块位置
+		long[] indexes = new long[count];
+		for (int i = 0; i < count; ++i, ++startBlockIndex) {
+			indexes[i] = startBlockIndex;
+		}
+		return indexes;
+	}
 }
