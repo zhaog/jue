@@ -116,6 +116,14 @@ public class BlockFileChannel {
 			cache = new LRUCache<Long, byte[]>(MAX_CAPACITY);
 		}
 	}
+	/**
+	 * 返回文件大小
+	 * @return
+	 * @throws IOException
+	 */
+	public long size() throws IOException {
+		return fileChannel.size();
+	}
 	
 	/**
 	 * 读取数据到字节数组中
@@ -207,7 +215,6 @@ public class BlockFileChannel {
 				// 存入缓存
 				cache.put(blockIndex, data);
 			}
-			
 		}
 		return data;
 	}
@@ -223,7 +230,7 @@ public class BlockFileChannel {
 		// 起始文件块的位置
 		long startBlockIndex = pos / blockSize;
 		// 最后一个文件块的索引位置
-		long lastBlockIndex = (long) Math.ceil((double)fileChannel.size() / blockSize);
+		long lastBlockIndex = (long) Math.ceil((double) size() / blockSize);
 		// 超出文件块
 		if (startBlockIndex > lastBlockIndex) {
 			throw new IOException("out of file block");
@@ -275,16 +282,57 @@ public class BlockFileChannel {
 		if (mod < CHECKSUM_SIZE) {
 			throw new IllegalArgumentException("can not write checksum data");
 		}
-		long fileSize = fileChannel.size();
+		// 文件大小
+		long fileSize = size();
 		// 写入的位置和文件尾部之间，超过了一个block块
 		if (position - fileSize >= blockSize) {
 			throw new IOException("out of file block");
 		}
+		// 已经写入的数据长度
+		int written = 0;
 		long[] blockIndexes = getWriteBlockIndexes(position, data.length);
-		// TODO
-		return 0;
+		for (int i = 0; i < blockIndexes.length; ++i) {
+			long blockIndex = blockIndexes[i];
+			byte[] d = null;
+			if (blockIndex < fileSize) {// 该索引块有数据，将数据读出
+				try {
+					d = getBlockData(blockIndex, false);
+				} catch (ChecksumException e) {// 不校验数据，不会抛出异常
+				}
+			} else {
+				d = new byte[blockSize - CHECKSUM_SIZE];
+			}
+			// 需要写入的数据的长度
+			int needWrite = 0;
+			// 需要写入的起始位置
+			int dstPos = 0;
+			if (i == 0) {
+				// 第一个块的可写部分大小
+				int n = (int) (blockSize - mod);
+				needWrite = (data.length > n) ? n : data.length;
+				dstPos = (int) (mod - CHECKSUM_SIZE);
+			} else if (i != blockIndexes.length - 1) {
+				needWrite = d.length;
+			} else { // 最后一块文件块，将所有数据写入
+				needWrite = data.length - written;
+			}
+			written += needWrite;
+			System.arraycopy(data, written, d, dstPos, needWrite);
+			writeBlockData(blockIndex, d);
+		}
+		return written;
 	}
 	
+	private void writeBlockData(long blockIndex, byte[] d) throws IOException {
+		Checksum checksum = checksumGenerator.createChecksum();
+		checksum.update(d, 0, d.length);
+		long chksum = checksum.getValue();
+		ByteBuffer buffer = ByteBuffer.allocate(blockSize);
+		buffer.putLong(chksum);
+		buffer.put(d);
+		fileChannel.write(buffer, blockIndex);
+	}
+
 	/**
 	 * 获取即将写入的数据对应的文件块的位置
 	 * @param pos 文件位置
