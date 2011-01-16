@@ -1,4 +1,4 @@
-package com.googlecode.jue;
+package com.googlecode.jue.util;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
