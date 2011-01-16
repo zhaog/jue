@@ -10,10 +10,19 @@ package com.googlecode.jue.file;
  */
 public class ValueRecord {
 
+	/**
+	 * 标志符，可以标志是否已删除或其他状态
+	 */
 	private byte flag;
 	
+	/**
+	 * value内容
+	 */
 	private byte[] value;
 	
+	/**
+	 * 记录的当前版本
+	 */
 	private int revision;
 
 	public ValueRecord(byte flag, byte[] value, int revision) {
