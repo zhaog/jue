@@ -24,7 +24,7 @@ public class BNode<K extends Comparable<K>, V extends Serializable> {
 	private int min;
 	
 	/**
-	* 当前内部节点的个数
+	* 当前内部键的个数
 	*/
 	private int count;
 	
