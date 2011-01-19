@@ -11,7 +11,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.zip.Checksum;
 
-import com.googlecode.jue.util.LRUCache;
+import com.googlecode.jue.util.ConcurrentLRUCache;
 
 /**
  * 以块的方式读写文件，可以设置块的大小，以及是否缓存
@@ -52,7 +52,7 @@ public class BlockFileChannel {
 	/**
 	 * 缓存
 	 */
-	private LRUCache<Long, ByteBuffer> cache;
+	private ConcurrentLRUCache<Long, ByteBuffer> cache;
 
 	/**
 	 * 校验码生成器
@@ -113,7 +113,7 @@ public class BlockFileChannel {
 		this.blockCache = blockCache;
 		this.checksumGenerator = checksumGenerator;
 		if (blockCache) {
-			cache = new LRUCache<Long, ByteBuffer>(MAX_CAPACITY);
+			cache = new ConcurrentLRUCache<Long, ByteBuffer>(MAX_CAPACITY);
 		}
 	}
 	
