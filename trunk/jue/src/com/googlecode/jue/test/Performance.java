@@ -20,7 +20,7 @@ public class Performance {
 
     public static final int readThreadCount = 10;
 
-    public static final int writeThreadCount = 10;
+    public static final int writeThreadCount = 1;
     
     static ExecutorService readExec;
     
@@ -51,10 +51,10 @@ public class Performance {
 //    	cache = new ConcurrentHashMap<String, String>(1000);
 //    	cache = Collections.synchronizedMap(new HashMap<String, String>(1000));
 //    	cache = new ConcurrentLRUCache<String, String>(1000);
-//    	cache = new ConcurrentLRUCache<String, String>(1000, 0.75f, 16);
+//    	cache = new ConcurrentLRUCache<String, String>(1000, 0.75f, 32);
     	cache = new LRUCache<String, String>(1000);
-    	readExec = Executors.newFixedThreadPool(readThreadCount);
-    	writeExec = Executors.newFixedThreadPool(writeThreadCount);
+    	readExec = Executors.newCachedThreadPool();
+    	writeExec = Executors.newCachedThreadPool();
     	totalReadTime = new AtomicLong();
     	totalWriteTime = new AtomicLong();
     	
@@ -88,9 +88,9 @@ public class Performance {
 //        for (int i = 0; i < timePerReadThread.size(); ++i) {
 //        	System.out.println(timePerReadThread.get(i));
 //        }
-        long avgTimePerReadThread = totalReadTime.longValue() / readThreadCount;
+        double avgTimePerReadThread = (double) totalReadTime.longValue() / readThreadCount;
         System.out.println("avgTimePerReadThread:" + avgTimePerReadThread);
-        System.out.println("readPerSecond:" + readCount / ((double)avgTimePerReadThread / 1000));
+        System.out.println("readPerSecond:" + readCount / (avgTimePerReadThread / 1000));
         System.out.println("==============================");
         
         writeExec.awaitTermination(waitSecond, TimeUnit.SECONDS);
@@ -103,9 +103,9 @@ public class Performance {
 //        for (int i = 0; i < timePerWriteThread.size(); ++i) {
 //        	System.out.println(timePerWriteThread.get(i));
 //        }
-        long avgTimePerWriteThread = totalWriteTime.longValue() / writeThreadCount;
+        double avgTimePerWriteThread = (double) totalWriteTime.longValue() / writeThreadCount;
         System.out.println("avgTimePerWriteThread:" + avgTimePerWriteThread);
-        System.out.println("writePerSecond:" + writeCount / ((double)avgTimePerWriteThread / 1000));
+        System.out.println("writePerSecond:" + writeCount / (avgTimePerWriteThread / 1000));
         System.out.println("==============================");
         
         System.out.println("cache size:" + cache.size());
