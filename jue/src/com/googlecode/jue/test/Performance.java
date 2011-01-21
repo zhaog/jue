@@ -1,6 +1,7 @@
 package com.googlecode.jue.test;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
@@ -9,7 +10,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 import com.googlecode.jue.util.ConcurrentLRUCache;
-import com.googlecode.jue.util.LRUCache;
+import com.googlecode.jue.util.ConcurrentLRUHashMap;
 
 
 public class Performance {
@@ -18,9 +19,9 @@ public class Performance {
     
     public static final int writeCount = 10000;
 
-    public static final int readThreadCount = 10;
+    public static final int readThreadCount = 2;
 
-    public static final int writeThreadCount = 1;
+    public static final int writeThreadCount = 2;
     
     static ExecutorService readExec;
     
@@ -40,7 +41,7 @@ public class Performance {
     
     static List<Long> timePerWriteThread;
     
-    static LRUCache<String, String> cache;
+    static ConcurrentLRUHashMap<String, String> cache;
     
     public static void main(String[] args) throws InterruptedException {
         init();
@@ -52,7 +53,8 @@ public class Performance {
 //    	cache = Collections.synchronizedMap(new HashMap<String, String>(1000));
 //    	cache = new ConcurrentLRUCache<String, String>(1000);
 //    	cache = new ConcurrentLRUCache<String, String>(1000, 0.75f, 32);
-    	cache = new LRUCache<String, String>(1000);
+//    	cache = new LRUCache<String, String>(1000);
+    	cache = new ConcurrentLRUHashMap<String, String>(100);
     	readExec = Executors.newCachedThreadPool();
     	writeExec = Executors.newCachedThreadPool();
     	totalReadTime = new AtomicLong();
