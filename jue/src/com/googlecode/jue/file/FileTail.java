@@ -8,7 +8,17 @@ package com.googlecode.jue.file;
  * @author noah
  *
  */
-public class FileTail {
+public class FileTail implements ADrop {
+	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 5378605477255397823L;
+	
+	/**
+	 * FileTail的长度，20个字节
+	 */
+	public static final int TAIL_LENGHT = 24;
 	
 	/**
 	 * 文件版本号

@@ -8,7 +8,12 @@ package com.googlecode.jue.file;
  * @author noah
  *
  */
-public class ValueRecord {
+public class ValueRecord implements ADrop {
+
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -8881259262935948069L;
 
 	/**
 	 * 标志符，可以标志是否已删除或其他状态
