@@ -8,7 +8,12 @@ package com.googlecode.jue.file;
  * @author noah
  *
  */
-public class ValueRevNode {
+public class ValueRevNode implements ADrop {
+
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -6060521308578833028L;
 
 	/**
 	 * 是否是叶子节点

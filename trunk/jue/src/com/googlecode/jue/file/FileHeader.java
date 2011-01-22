@@ -8,7 +8,18 @@ package com.googlecode.jue.file;
  * @author noah
  *
  */
-public class FileHeader {
+public class FileHeader implements ADrop {
+	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -2193314360648043655L;
+	
+	/**
+	 * FileHeader的长度，20个字节
+	 */
+	public static final int HEADER_LENGHT = 20;
+
 	/**
 	 * 文件尾的位置
 	 */
@@ -35,9 +46,9 @@ public class FileHeader {
 	private byte valueRevType;
 	
 	/**
-	 * 是否压缩
+	 * Value是否压缩
 	 */
-	private byte compressed;
+	private byte valueCompressed;
 	
 	/**
 	 * 采用的压缩编码
@@ -88,12 +99,12 @@ public class FileHeader {
 		this.valueRevTreeMin = valueRevTreeMin;
 	}
 
-	public byte getCompressed() {
-		return compressed;
+	public byte getValueCompressed() {
+		return valueCompressed;
 	}
 
-	public void setCompressed(byte compressed) {
-		this.compressed = compressed;
+	public void setValueCompressed(byte valueCompressed) {
+		this.valueCompressed = valueCompressed;
 	}
 
 	public byte getCompressionCodec() {
@@ -102,6 +113,15 @@ public class FileHeader {
 
 	public void setCompressionCodec(byte compressionCodec) {
 		this.compressionCodec = compressionCodec;
+	}
+
+	@Override
+	public String toString() {
+		return "FileHeader [fileTail=" + fileTail + ", keyTreeMin="
+				+ keyTreeMin + ", keyType=" + keyType + ", valueRevTreeMin="
+				+ valueRevTreeMin + ", valueRevType=" + valueRevType
+				+ ", valueCompressed=" + valueCompressed
+				+ ", compressionCodec=" + compressionCodec + "]";
 	}
 
 	

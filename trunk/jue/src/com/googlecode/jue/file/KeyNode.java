@@ -7,8 +7,13 @@ package com.googlecode.jue.file;
  * Key的B+树的节点
  * @author noah
  */
-public class KeyNode<K extends Comparable<K>> {
+public class KeyNode implements ADrop {
 	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1155519276926658836L;
+
 	/**
 	 * 是否是叶子节点
 	 */
