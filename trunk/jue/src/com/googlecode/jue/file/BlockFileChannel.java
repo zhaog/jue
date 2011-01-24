@@ -2,7 +2,6 @@
  * 
  */
 package com.googlecode.jue.file;
-
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -15,40 +14,46 @@ import com.googlecode.jue.util.ConcurrentLRUCache;
 
 /**
  * 以块的方式读写文件，可以设置块的大小，以及是否缓存
+ * 
  * @author noah
  */
 public class BlockFileChannel {
-	
+
 	/**
 	 * 最大缓存数
 	 */
 	public static final int MAX_CAPACITY = 100000;
-	
+
 	/**
 	 * 文件块的校验码的长度
 	 */
 	public static final int CHECKSUM_SIZE = 8;
 	
 	/**
+	 * 校验码存储文件的后缀
+	 */
+	public static final String BLOCK_SUFFIX = ".bck";
+
+	/**
 	 * 文件Channel对象
 	 */
 	private FileChannel fileChannel;
 	
 	/**
+	 * 存储block块的校验码的文件
+	 */
+	private FileChannel blockChecksumChannel;
+
+	/**
 	 * 块大小
 	 */
 	private final int blockSize;
-	
-	/**
-	 * 文件块中实际存储的数据大小
-	 */
-	private final int blockDataSize;
-	
+
 	/**
 	 * 是否缓存文件块
 	 */
-	private boolean blockCache;
-	
+	private final boolean blockCache;
+
 	/**
 	 * 缓存
 	 */
@@ -58,35 +63,50 @@ public class BlockFileChannel {
 	 * 校验码生成器
 	 */
 	private ChecksumGenerator checksumGenerator;
+
 	/**
 	 * 构造一个BlockFileChannel
-	 * @param file 文件对象
-	 * @param blockSize 快大小
-	 * @param checksumGenerator 校验码生成器
+	 * 
+	 * @param file
+	 *            文件对象
+	 * @param blockSize
+	 *            快大小
+	 * @param checksumGenerator
+	 *            校验码生成器
 	 * @throws FileNotFoundException
 	 */
 	public BlockFileChannel(File file, int blockSize, ChecksumGenerator checksumGenerator) throws FileNotFoundException {
 		this(file, blockSize, false, checksumGenerator);
 	}
-	
+
 	/**
 	 * 构造一个BlockFileChannel
-	 * @param filePath 文件路径
-	 * @param blockSize 快大小
-	 * @param checksumGenerator 校验码生成器
+	 * 
+	 * @param filePath
+	 *            文件路径
+	 * @param blockSize
+	 *            快大小
+	 * @param checksumGenerator
+	 *            校验码生成器
 	 * @throws FileNotFoundException
 	 */
 	public BlockFileChannel(String filePath, int blockSize, ChecksumGenerator checksumGenerator) throws FileNotFoundException {
 		this(filePath, blockSize, false, checksumGenerator);
 	}
-	
+
 	/**
 	 * 构造一个BlockFileChannel
-	 * @param filePath 文件路径
-	 * @param blockSize 块大小
-	 * @param blockCache 是否缓存块
-	 * @param checksumGenerator 校验码生成器
-	 * @throws FileNotFoundException 文件不存在
+	 * 
+	 * @param filePath
+	 *            文件路径
+	 * @param blockSize
+	 *            块大小
+	 * @param blockCache
+	 *            是否缓存块
+	 * @param checksumGenerator
+	 *            校验码生成器
+	 * @throws FileNotFoundException
+	 *             文件不存在
 	 */
 	public BlockFileChannel(String filePath, int blockSize, boolean blockCache, ChecksumGenerator checksumGenerator) throws FileNotFoundException {
 		this(new File(filePath), blockSize, blockCache, checksumGenerator);
@@ -94,64 +114,74 @@ public class BlockFileChannel {
 
 	/**
 	 * 构造一个BlockFileChannel
-	 * @param file 文件对象
-	 * @param blockSize 块大小
-	 * @param blockCache 是否缓存块
-	 * @param checksumGenerator 校验码生成器
-	 * @throws FileNotFoundException 文件不存在
+	 * 
+	 * @param file
+	 *            文件对象
+	 * @param blockSize
+	 *            块大小
+	 * @param blockCache
+	 *            是否缓存块
+	 * @param checksumGenerator
+	 *            校验码生成器
+	 * @throws FileNotFoundException
+	 *             文件不存在
 	 */
 	public BlockFileChannel(File file, int blockSize, boolean blockCache, ChecksumGenerator checksumGenerator) throws FileNotFoundException {
 		super();
 		RandomAccessFile raf = new RandomAccessFile(file, "rw");
-		fileChannel = raf.getChannel();
+		this.fileChannel = raf.getChannel();
+		
+		File blockchkFile = new File(file.getName() + BLOCK_SUFFIX);
+		RandomAccessFile blockchkFileRaf = new RandomAccessFile(blockchkFile, "rw");
+		this.blockChecksumChannel = blockchkFileRaf.getChannel();
+			
 		this.blockSize = blockSize;
-		this.blockDataSize = blockSize - CHECKSUM_SIZE;
-		// 文件块小于校验码大小
-		if (this.blockDataSize <= 0) {
-			throw new IllegalArgumentException("too small block size");
-		}
 		this.blockCache = blockCache;
 		this.checksumGenerator = checksumGenerator;
 		if (blockCache) {
 			cache = new ConcurrentLRUCache<Long, ByteBuffer>(MAX_CAPACITY);
 		}
 	}
-	
+
 	/**
 	 * 关闭文件
+	 * 
 	 * @throws IOException
 	 */
 	public void close() throws IOException {
 		fileChannel.close();
 	}
-	
+
 	/**
 	 * 返回文件大小
+	 * 
 	 * @return
 	 * @throws IOException
 	 */
 	public long size() throws IOException {
 		return fileChannel.size();
 	}
-	
+
 	/**
 	 * 读取数据到字节数组中
-	 * @param buffer 需要存储的数据缓存
-	 * @param position 读取位置
-	 * @param checksum 是否要校验数据
+	 * 
+	 * @param buffer
+	 *            需要存储的数据缓存
+	 * @param position
+	 *            读取位置
+	 * @param checksum
+	 *            是否要校验数据
 	 * @return 返回读取的数据长度
-	 * @throws IOException 文件读取异常
-	 * @throws ChecksumException 校验错误抛出的异常
+	 * @throws IOException
+	 *             文件读取异常
+	 * @throws ChecksumException
+	 *             校验错误抛出的异常
 	 */
-	public int read(ByteBuffer buffer, long position, boolean checksum) throws IOException, ChecksumException {
+	public int read(ByteBuffer buffer, long position, boolean checksum)
+			throws IOException, ChecksumException {
 		// 文件为空
-		if(size() == 0) {
+		if (size() == 0) {
 			return -1;
-		}
-		long mod = position % blockSize;
-		// 读取位置处于校验码的位置
-		if (mod < CHECKSUM_SIZE) {
-			throw new IllegalArgumentException("can not read checksum data");
 		}
 		// 最大读取的数据量
 		int maxSize = buffer.remaining();
@@ -163,13 +193,13 @@ public class BlockFileChannel {
 			ByteBuffer blockDataBuffer = getBlockData(blockIndexes[i], checksum);
 			if (i == 0) {
 				// 要从数据块中读取的起始位置
-				blockDataBuffer.position((int) (mod - CHECKSUM_SIZE));
+				blockDataBuffer.position((int) (position % blockSize));
 				// 设置第一个block块的读书数据大小限制
 				if (maxSize < blockDataBuffer.remaining()) {
 					blockDataBuffer.limit(blockDataBuffer.position() + maxSize);
 				}
 			} else if (i == blockIndexes.length - 1) {// 最后一块文件块，未必需要读取全部
-				// 需要读取的剩余大小
+			// 需要读取的剩余大小
 				int s = maxSize - count;
 				if (s < blockDataBuffer.remaining()) {
 					blockDataBuffer.limit(s);
@@ -178,20 +208,24 @@ public class BlockFileChannel {
 			// 更新已经读取的数据量
 			count += blockDataBuffer.remaining();
 			buffer.put(blockDataBuffer);
-			
+
 		}
 		return count;
 	}
-	
+
 	/**
 	 * 读取相应的文件块
-	 * @param blockIndex 文件块位置
-	 * @param checksum 是否需要校验数据
+	 * 
+	 * @param blockIndex
+	 *            文件块位置
+	 * @param checksum
+	 *            是否需要校验数据
 	 * @return
-	 * @throws IOException 
-	 * @throws ChecksumException 
+	 * @throws IOException
+	 * @throws ChecksumException
 	 */
-	private ByteBuffer getBlockData(long blockIndex, boolean checksum) throws IOException, ChecksumException {
+	private ByteBuffer getBlockData(long blockIndex, boolean checksum)
+			throws IOException, ChecksumException {
 		ByteBuffer dataBuffer = null;
 		// 从缓存中获取该文件块
 		if (blockCache) {
@@ -200,12 +234,12 @@ public class BlockFileChannel {
 		// 缓存中不存在该块
 		if (dataBuffer == null) {
 			// 创建缓冲区
-			ByteBuffer buffer = ByteBuffer.allocate(blockSize);
+			dataBuffer = ByteBuffer.allocate(blockSize);
 			// 已经读取的大小
 			int ct = 0;
 			do {
 				// 读取数据
-				int n = fileChannel.read(buffer, blockIndex * blockSize + ct);
+				int n = fileChannel.read(dataBuffer, blockIndex * blockSize + ct);
 				// 读到末尾
 				if (n == -1) {
 					break;
@@ -216,26 +250,37 @@ public class BlockFileChannel {
 			if (ct == 0) {
 				return null;
 			}
-			buffer.flip();
-			// 校验码
-			long chsum = buffer.getLong();
-			// 获取实际的数据
-			byte[] d = new byte[buffer.remaining()];
-			buffer.get(d);
+			dataBuffer.flip();
 			// 是否需要校验
 			if (checksum) {
+				// 读取校验码
+				ByteBuffer chksumBuffer = ByteBuffer.allocate(CHECKSUM_SIZE);
+				int c = 0;
+				do {
+					// 读取数据
+					int n = blockChecksumChannel.read(chksumBuffer, blockIndex * CHECKSUM_SIZE + c);
+					// 读到末尾
+					if (n == -1) {
+						break;
+					}
+					c += n;
+				} while (c < CHECKSUM_SIZE);// 直到读满一个校验码
+				// 读取不到校验码
+				if (c == 0) {
+					throw new ChecksumException("can not read checksum");
+				}
+				chksumBuffer.flip();
+				long chksum = chksumBuffer.getLong();
+				// 计算数据的校验码
+				byte[] b = dataBuffer.array();
 				Checksum cksum = checksumGenerator.createChecksum();
-				cksum.update(d, 0, d.length);
-				long chsum2 = cksum.getValue();
+				cksum.update(b, 0, b.length);
+				long chksum2 = cksum.getValue();
 				// 校验码错误
-				if (chsum != chsum2) {
+				if (chksum != chksum2) {
 					throw new ChecksumException();
 				}
 			}
-			// 只包含数据的数据缓冲区
-			dataBuffer = ByteBuffer.allocate(blockSize - CHECKSUM_SIZE);
-			buffer.position(CHECKSUM_SIZE);
-			dataBuffer.put(buffer);
 			if (blockCache) {
 				// 存入缓存
 				cache.put(blockIndex, dataBuffer);
@@ -247,10 +292,13 @@ public class BlockFileChannel {
 
 	/**
 	 * 获取需要读取的数据对应的文件块的位置
-	 * @param pos 文件位置
-	 * @param size 要获取的长度
+	 * 
+	 * @param pos
+	 *            文件位置
+	 * @param size
+	 *            要获取的长度
 	 * @return
-	 * @throws IOException 
+	 * @throws IOException
 	 */
 	private long[] getReadBlockIndexes(long pos, int size) throws IOException {
 		long fileSize = size();
@@ -260,22 +308,10 @@ public class BlockFileChannel {
 		}
 		// 起始文件块的位置
 		long startBlockIndex = pos / blockSize;
+		// 确定结束的块位置
+		long endBlockIndex = (pos + size) / blockSize;
 		// 最后一个文件块的索引位置
 		long lastBlockIndex = (long) Math.ceil((double) fileSize / blockSize) - 1;
-		// 确定结束的块位置
-		long endBlockIndex = 0;
-		long m = blockSize - pos % blockSize;
-		long sz = size;
-		sz -= m;
-		if (sz <= 0) {
-			endBlockIndex = startBlockIndex;
-		} else {
-			// 之后需要再读取的块数
-			long c = sz / this.blockDataSize + 1;
-			// 结束文件块的位置
-			endBlockIndex = startBlockIndex + c;
-		}
-		
 		// 超出文件
 		if (endBlockIndex > lastBlockIndex) {
 			endBlockIndex = lastBlockIndex;
@@ -289,110 +325,128 @@ public class BlockFileChannel {
 		}
 		return indexes;
 	}
-	
+
+
 	/**
 	 * 在指定位置写入数据
-	 * @param data 数据缓冲区
-	 * @param position 位置
+	 * 
+	 * @param data
+	 *            数据缓冲区
+	 * @param position
+	 *            位置
 	 * @return
 	 * @throws IOException
 	 */
 	public int write(ByteBuffer dataBuffer, long position) throws IOException {
-		long mod = position % blockSize;
-		// 读取位置处于校验码的位置
-		if (mod < CHECKSUM_SIZE) {
-			throw new IllegalArgumentException("can not write checksum data");
-		}
 		// 文件大小
 		long fileSize = size();
-		// 写入的位置和文件尾部之间，超过了一个block块
-		if (position - fileSize >= blockSize) {
-			throw new IOException("out of file block");
+		// 写入位置超出文件尾
+		if (position > fileSize) {
+			throw new IOException("out of file");
 		}
-		// 需要写入的数据长度
-		int dataSize = dataBuffer.remaining();
+		// 记录缓冲区的起始位置
+		int startPos = dataBuffer.position();
 		// 保存缓冲区限制
 		int oldLimit = dataBuffer.limit();
-		// 已经写入的数据长度
-		int written = 0;
+		// 需要写入的数据长度
+		int dataSize = dataBuffer.remaining();
+		// 获取需要更新的数据块索引
 		long[] blockIndexes = getWriteBlockIndexes(position, dataSize);
-		for (int i = 0; i < blockIndexes.length; ++i) {
-			long blockIndex = blockIndexes[i];
-			ByteBuffer blockDataBuffer = null;
-			if (blockIndex * blockSize < fileSize) {// 该索引块有数据，将数据读出
-				try {
-					blockDataBuffer = getBlockData(blockIndex, false);
-				} catch (ChecksumException e) {// 不校验数据，不会抛出异常
-				}
-			} else {
-				blockDataBuffer = ByteBuffer.allocate(blockSize - CHECKSUM_SIZE);
-			}
-			if (i == 0) {
-				// 第一个块的可写部分大小
-				int limit = (int) (blockSize - mod);
-				// 设置可以写入第一个block块的数据大小限制
-				if (dataBuffer.remaining() > limit) {
-					dataBuffer.limit(limit);
-				}
-				blockDataBuffer.position((int) (mod - CHECKSUM_SIZE));
-			} else if (i == blockIndexes.length - 1) { // 最后一块文件块，将所有数据写入
-				dataBuffer.limit(oldLimit);
-			} else {
-				dataBuffer.limit(dataBuffer.position() + blockDataSize);
-			}
-			// 更新写入的数据长度
-			written += dataBuffer.remaining();
-			blockDataBuffer.put(dataBuffer);
-			blockDataBuffer.rewind();
-			writeBlockData(blockIndex, blockDataBuffer);
-		}
-		return written;
-	}
-	
-	/**
-	 * 写入块数据
-	 * @param blockIndex
-	 * @param dataBuffer
-	 * @throws IOException
-	 */
-	private void writeBlockData(long blockIndex, ByteBuffer dataBuffer) throws IOException {
-		Checksum checksum = checksumGenerator.createChecksum();
-		byte[] b = new byte[dataBuffer.remaining()];
-		dataBuffer.get(b);
-		checksum.update(b, 0, b.length);
 		// 生成校验码
-		long chksum = checksum.getValue();
-		ByteBuffer buffer = ByteBuffer.allocate(blockSize);
-		buffer.putLong(chksum);
-		dataBuffer.rewind();
-		buffer.put(dataBuffer);
-		buffer.flip();
-		fileChannel.write(buffer, blockIndex * blockSize);
+		long[] checksums = generateChecksum(dataBuffer, position, blockIndexes);
+		// 清空缓存
+		if (blockCache) {
+			for (int i = 0; i < blockIndexes.length; ++i) {
+				cache.remove(blockIndexes[i]);
+			}
+		}
+		
+		dataBuffer.position(startPos);
+		dataBuffer.limit(oldLimit);
+		// 写入的数据
+		int written = fileChannel.write(dataBuffer, position);
+		
+		ByteBuffer chksumBuffer = ByteBuffer.allocate(CHECKSUM_SIZE * checksums.length);
+		for (int i = 0; i < checksums.length; ++i) {
+			chksumBuffer.putLong(checksums[i]);
+		}
+		chksumBuffer.flip();
+		// 更新校验码
+		blockChecksumChannel.write(chksumBuffer, blockIndexes[0] * CHECKSUM_SIZE);
+		return written;
 	}
 
 	/**
-	 * 获取即将写入的数据对应的文件块的位置
-	 * @param pos 文件位置
-	 * @param size 要获取的长度
+	 * 生成校验码
+	 * @param dataBuffer
+	 * @param position
+	 * @param blockIndexes 
 	 * @return
-	 * @throws IOException 
+	 * @throws IOException  
+	 */
+	private long[] generateChecksum(ByteBuffer dataBuffer, long position, long[] blockIndexes) throws IOException {
+		// 保存缓冲区限制
+		int oldLimit = dataBuffer.limit();
+		long[] checksums = new long[blockIndexes.length];
+		for (int i = 0; i < blockIndexes.length; ++i) {
+			long blockIndex = blockIndexes[i];
+			ByteBuffer buffer = null;
+			try {
+				buffer = getBlockDataOrEmptyBuffer(blockIndex, false);
+			} catch (ChecksumException e) {
+				// 不校验数据，不会抛出异常
+			}
+			if (i == 0) {// 第一个数据块，根据position更新部分数据
+				// 第一个数据块更新位置
+				int pos = (int) (position % blockSize);
+				buffer.position(pos);
+				dataBuffer.limit(blockSize - pos);
+			} else if (i == blockIndexes.length - 1) {// 最后一个数据块
+				dataBuffer.limit(oldLimit);
+			} else {
+				dataBuffer.limit(dataBuffer.position() + blockSize);
+			}
+			buffer.put(dataBuffer);
+			buffer.flip();
+			
+			Checksum chksum = checksumGenerator.createChecksum();
+			byte[] b = buffer.array();
+			chksum.update(b, 0, b.length);
+			checksums[i] = chksum.getValue();
+		}
+		return checksums;
+	}
+
+	/**
+	 * 获取对应的块数据，如果该块超出文件，那么返回空缓冲区
+	 * @param blockIndex
+	 * @param checksum
+	 * @return
+	 * @throws IOException
+	 * @throws ChecksumException 
+	 */
+	private ByteBuffer getBlockDataOrEmptyBuffer(long blockIndex, boolean checksum) throws IOException, ChecksumException {
+		if (blockIndex * blockSize < size()) {
+			return getBlockData(blockIndex, checksum);
+		}
+		return ByteBuffer.allocate(blockSize);
+	}
+	
+	/**
+	 * 获取即将写入的数据对应的文件块的位置
+	 * 
+	 * @param pos
+	 *            文件位置
+	 * @param size
+	 *            要获取的长度
+	 * @return
+	 * @throws IOException
 	 */
 	private long[] getWriteBlockIndexes(long pos, int size) throws IOException {
 		// 起始文件块的位置
 		long startBlockIndex = pos / blockSize;
 		// 确定结束的块位置
-		long endBlockIndex = 0;
-		long m = blockSize - pos % blockSize;
-		long sz = size;
-		sz -= m;
-		if (sz <= 0) {
-			endBlockIndex = startBlockIndex;
-		} else {
-			// 之后需要再读取的块数
-			int count = (int) Math.ceil( (double)sz / this.blockDataSize);
-			// 结束文件块的位置
-			endBlockIndex = startBlockIndex + count;
-		}
+		long endBlockIndex = (pos + size) / blockSize;
 		// 需要读取的文件块的个数
 		int count = (int) (endBlockIndex - startBlockIndex + 1);
 		// 获取各文件块位置
