@@ -34,12 +34,12 @@ public class BlockFileChannelTest extends TestCase {
 	
 //	public void testWriteData() {
 //		ByteBuffer dataBuffer = ByteBuffer.allocate(100);
-//		for (int i = 0; i < 26; ++i) {
-//			dataBuffer.put((i + "").getBytes());
+//		for (int i = 0; i < 10; ++i) {
+//			dataBuffer.putInt(i);
 //		}
 //		dataBuffer.flip();
 //		try {
-//			blockFileChannel.write(dataBuffer, BlockFileChannel.CHECKSUM_SIZE);
+//			blockFileChannel.write(dataBuffer, 0);
 //		} catch (IOException e) {
 //			// TODO Auto-generated catch block
 //			e.printStackTrace();
@@ -47,16 +47,17 @@ public class BlockFileChannelTest extends TestCase {
 //	}
 	
 	public void testReadData() {
-		ByteBuffer dataBuffer = ByteBuffer.allocate(42);
+		ByteBuffer dataBuffer = ByteBuffer.allocate(40);
 		try {
-			int size = blockFileChannel.read(dataBuffer, BlockFileChannel.CHECKSUM_SIZE, true);
-//			Assert.assertEquals(16, size);
+			int size = blockFileChannel.read(dataBuffer, 0, true);
+			Assert.assertEquals(40, size);
 			dataBuffer.limit(size);
 			dataBuffer.flip();
-			byte[] array = new byte[size];
-			dataBuffer.get(array);
-			String s = new String(array);
-			Assert.assertEquals("cd", s);
+			for (int i = 0; i < 10; ++i) {
+				int j = dataBuffer.getInt();
+				Assert.assertEquals(i, j);
+			}
+			
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
