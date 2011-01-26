@@ -15,6 +15,16 @@ public class KeyNode implements ADrop {
 	private static final long serialVersionUID = 1155519276926658836L;
 
 	/**
+	 * 叶子节点
+	 */
+	public static final byte LEAF = 0x1;
+	
+	/**
+	 * 非叶节点
+	 */
+	public static final byte NOTLEAF = 0x0;
+	
+	/**
 	 * 是否是叶子节点
 	 */
 	private byte leaf;
