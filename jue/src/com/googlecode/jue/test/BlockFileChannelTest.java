@@ -9,7 +9,7 @@ import java.nio.ByteBuffer;
 import junit.framework.Assert;
 import junit.framework.TestCase;
 
-import com.googlecode.jue.file.Adler32ChecksumGenerator;
+import com.googlecode.jue.file.CRC32ChecksumGenerator;
 import com.googlecode.jue.file.BlockFileChannel;
 import com.googlecode.jue.file.ChecksumException;
 
@@ -23,7 +23,7 @@ public class BlockFileChannelTest extends TestCase {
 	@Override
 	protected void setUp() throws Exception {
 		super.setUp();
-		blockFileChannel = new BlockFileChannel("blockTestFile", 32, new Adler32ChecksumGenerator());
+		blockFileChannel = new BlockFileChannel("blockTestFile", 32, new CRC32ChecksumGenerator());
 	}
 
 	@Override
