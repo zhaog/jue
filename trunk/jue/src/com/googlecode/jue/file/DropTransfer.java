@@ -70,11 +70,15 @@ public class DropTransfer {
 		return buffer;
 	}
 
-	public ByteBuffer keyNodetoByteBuffer(KeyNode keyNode) {
+	/**
+	 * 将keyNode转换成Byteuffer
+	 * @param keyNode
+	 * @return
+	 */
+	public ByteBuffer keyNodeToByteBuffer(KeyNode keyNode) {
 		ByteDynamicArray array = new ByteDynamicArray();
 		// 是否叶节点
 		array.add(keyNode.getLeaf());
-		
 		byte[][] keys = keyNode.getKeys();
 		// 关键字的数量
 		array.add(ByteUtil.int2byte(keys.length));
@@ -96,6 +100,74 @@ public class DropTransfer {
 		return buffer;
 	}
 	
+	public ByteBuffer keyRecordToByteBuffer(KeyRecord keyRecord) {
+		ByteDynamicArray array = new ByteDynamicArray();
+		// 标志符
+		array.add(keyRecord.getFlag());
+		byte[] key = keyRecord.getKey();
+		// 关键字的长度
+		array.add(ByteUtil.int2byte(key.length));
+		// 关键字
+		array.add(key);
+		// Value的版本树的根节点
+		array.add(ByteUtil.long2byte(keyRecord.getRevRootNode()));
+		// 当前Key的版本
+		array.add(ByteUtil.int2byte(keyRecord.getRevision()));
+		// 最新版本的Value记录地址
+		array.add(ByteUtil.long2byte(keyRecord.getLastestValue()));
+		byte[] b = array.toByteArray();
+		ByteBuffer buffer = ByteBuffer.allocate(b.length);
+		buffer.put(b);
+		return buffer;
+	}
+	
+	/**
+	 * ValueRevNode转换成ByteBuffer
+	 * @param valueRevNode
+	 * @return
+	 */
+	public ByteBuffer valueRevNodeToByteBuffer(ValueRevNode valueRevNode) {
+		ByteDynamicArray array = new ByteDynamicArray();
+		// 是否叶节点
+		array.add(valueRevNode.getLeaf());
+		int[] revisions = valueRevNode.getRevisions();
+		// 关键字的数量
+		array.add(ByteUtil.int2byte(revisions.length));
+		for (int i = 0; i < revisions.length; ++i) {
+			array.add(ByteUtil.int2byte(revisions[i]));
+		}
+		// 添加子树地址
+		long[] childAddr = valueRevNode.getChildOrKeyAddr();
+		for (int i = 0; i < childAddr.length; ++i) {
+			array.add(ByteUtil.long2byte(childAddr[i]));
+		}
+		byte[] b = array.toByteArray();
+		ByteBuffer buffer = ByteBuffer.allocate(b.length);
+		buffer.put(b);
+		return buffer;
+	}
+	
+	/**
+	 * ValueRecord转换成ByteBuffer
+	 * @param valueRecord
+	 * @return
+	 */
+	public ByteBuffer valueRecordToByteBuffer(ValueRecord valueRecord) {
+		ByteDynamicArray array = new ByteDynamicArray();
+		// 标志符
+		array.add(valueRecord.getFlag());
+		byte[] value = valueRecord.getValue();
+		// Value的长度
+		array.add(ByteUtil.int2byte(value.length));
+		// 加入Value
+		array.add(value);
+		// Value的版本
+		array.add(ByteUtil.int2byte(valueRecord.getRevision()));		
+		byte[] b = array.toByteArray();
+		ByteBuffer buffer = ByteBuffer.allocate(b.length);
+		buffer.put(b);
+		return buffer;
+	}
 	/**
 	 * 读取文件尾
 	 * @param position
@@ -121,6 +193,7 @@ public class DropTransfer {
 	    tail.setEntryCount(entryCount);
 		return tail;
 	}
+	
 	
 	/**
 	 * 读取文件头

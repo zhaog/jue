@@ -23,17 +23,17 @@ public class ValueRevNode implements ADrop {
 	/**
 	 * 主键(版本号)
 	 */
-	private int[] keys;
+	private int[] revisions;
 	
 	/**
 	 * 子节点或者键的地址
 	 */
 	private long[] childOrKeyAddr;
 
-	public ValueRevNode(byte leaf, int[] keys, long[] childOrKeyAddr) {
+	public ValueRevNode(byte leaf, int[] revisions, long[] childOrKeyAddr) {
 		super();
 		this.leaf = leaf;
-		this.keys = keys;
+		this.revisions = revisions;
 		this.childOrKeyAddr = childOrKeyAddr;
 	}
 
@@ -41,8 +41,9 @@ public class ValueRevNode implements ADrop {
 		return leaf;
 	}
 
-	public int[] getKeys() {
-		return keys;
+
+	public int[] getRevisions() {
+		return revisions;
 	}
 
 	public long[] getChildOrKeyAddr() {
