@@ -34,13 +34,19 @@ public class KeyRecord implements ADrop {
 	 * 当前Key的版本
 	 */
 	private int revision;
+	
+	/**
+	 * 最新版本的Value记录地址
+	 */
+	private long lastestValue;
 
-	public KeyRecord(byte flag, byte[] key, long revRootNode, int revision) {
+	public KeyRecord(byte flag, byte[] key, long revRootNode, int revision, long lastestValue) {
 		super();
 		this.flag = flag;
 		this.key = key;
 		this.revRootNode = revRootNode;
 		this.revision = revision;
+		this.lastestValue = lastestValue;
 	}
 
 	public byte getFlag() {
@@ -57,6 +63,10 @@ public class KeyRecord implements ADrop {
 
 	public int getRevision() {
 		return revision;
+	}
+
+	public long getLastestValue() {
+		return lastestValue;
 	}
 	
 	
