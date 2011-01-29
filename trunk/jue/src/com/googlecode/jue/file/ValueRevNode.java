@@ -16,6 +16,16 @@ public class ValueRevNode implements ADrop {
 	private static final long serialVersionUID = -6060521308578833028L;
 
 	/**
+	 * 叶子节点
+	 */
+	public static final byte LEAF = 0x1;
+	
+	/**
+	 * 非叶节点
+	 */
+	public static final byte NOTLEAF = 0x0;
+	
+	/**
 	 * 是否是叶子节点
 	 */
 	private byte leaf;

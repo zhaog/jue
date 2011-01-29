@@ -89,7 +89,7 @@ public class DropTransfer {
 			// 键的内容
 			array.add(key);
 		}
-		// 添加子树地址
+		// 添加子树或者键记录的地址
 		long[] childAddr = keyNode.getChildOrKeyAddr();
 		for (int i = 0; i < childAddr.length; ++i) {
 			array.add(ByteUtil.long2byte(childAddr[i]));
@@ -168,32 +168,6 @@ public class DropTransfer {
 		buffer.put(b);
 		return buffer;
 	}
-	/**
-	 * 读取文件尾
-	 * @param position
-	 * @return
-	 * @throws IOException
-	 * @throws ChecksumException
-	 */
-	public FileTail readTail(long position) throws IOException, ChecksumException {
-		ByteBuffer buffer = ByteBuffer.allocate(FileTail.TAIL_LENGHT);
-		blockChannel.read(buffer, position, true);
-		buffer.flip();
-		int revision = buffer.getInt();
-		long rootNode = buffer.getLong();
-	    int avgKeyLen = buffer.getInt();
-	    int avgValueLen = buffer.getInt();
-	    int entryCount = buffer.getInt();
-	    
-	    FileTail tail = new FileTail();
-	    tail.setRevision(revision);
-	    tail.setRootNode(rootNode);
-	    tail.setAvgKeyLen(avgKeyLen);
-	    tail.setAvgValueLen(avgValueLen);
-	    tail.setEntryCount(entryCount);
-		return tail;
-	}
-	
 	
 	/**
 	 * 读取文件头
@@ -224,6 +198,181 @@ public class DropTransfer {
 		
 		return header;
 	}
+
+	/**
+	 * 读取文件尾
+	 * @param position
+	 * @return
+	 * @throws IOException
+	 * @throws ChecksumException
+	 */
+	public FileTail readTail(long position) throws IOException, ChecksumException {
+		ByteBuffer buffer = ByteBuffer.allocate(FileTail.TAIL_LENGHT);
+		blockChannel.read(buffer, position, true);
+		buffer.flip();
+		int revision = buffer.getInt();
+		long rootNode = buffer.getLong();
+	    int avgKeyLen = buffer.getInt();
+	    int avgValueLen = buffer.getInt();
+	    int entryCount = buffer.getInt();
+	    
+	    FileTail tail = new FileTail();
+	    tail.setRevision(revision);
+	    tail.setRootNode(rootNode);
+	    tail.setAvgKeyLen(avgKeyLen);
+	    tail.setAvgValueLen(avgValueLen);
+	    tail.setEntryCount(entryCount);
+		return tail;
+	}
 	
+	/**
+	 * 从磁盘上，读取KeyNode
+	 * @param position 读取的位置
+	 * @return
+	 * @throws IOException
+	 * @throws ChecksumException
+	 */
+	public KeyNode readKeyNode(long position) throws IOException, ChecksumException {
+		// 读取偏移量
+		long offset = position;
+		ByteBuffer buffer = ByteBuffer.allocate(5);
+		blockChannel.read(buffer, offset, true);
+		buffer.flip();
+		offset += buffer.limit();
+		// 是否叶子节点
+		byte leaf = buffer.get();
+		// 键的数量
+		int keyCount = buffer.getInt();
+		byte[][] keys = new byte[keyCount][];
+		ByteBuffer keyLengthBuffer = ByteBuffer.allocate(4);
+		for (int i = 0; i < keyCount; ++i) {
+			// 读取键的长度
+			blockChannel.read(keyLengthBuffer, offset, true);
+			keyLengthBuffer.flip();
+			offset += keyLengthBuffer.limit();
+			int keyLength = keyLengthBuffer.getInt();
+			// 读取键的内容
+			ByteBuffer keyBuffer = ByteBuffer.allocate(keyLength);
+			blockChannel.read(keyBuffer, offset, true);
+			keyBuffer.flip();
+			offset += keyBuffer.limit();
+			keys[i] = keyBuffer.array();
+			
+			keyLengthBuffer.clear();
+		}
+		// 判断是否是叶子节点以及子树或者键记录的数量
+		int childLenght = (KeyNode.LEAF == leaf) ? keyCount : keyCount + 1;
+		long[] childOrKeyAddr = new long[childLenght];
+		// 子树或者键记录的地址
+		ByteBuffer childAddrBuffer = ByteBuffer.allocate(childLenght * 8);
+		blockChannel.read(childAddrBuffer, offset, true);
+		for (int j = 0; j < childLenght; ++j) {
+			childOrKeyAddr[j] = childAddrBuffer.getLong();
+		}
+		KeyNode keyNode = new KeyNode(leaf, keys, childOrKeyAddr);
+		return keyNode;
+	}
 	
+	/**
+	 * 读取KeyRecord
+	 * @param position 读取的位置
+	 * @return
+	 * @throws IOException
+	 * @throws ChecksumException
+	 */
+	public KeyRecord readKeyRecord(long position) throws IOException, ChecksumException {
+		// 读取偏移量
+		long offset = position;
+		ByteBuffer buffer = ByteBuffer.allocate(5);
+		blockChannel.read(buffer, offset, true);
+		buffer.flip();
+		offset += buffer.limit();
+		// 标识符
+		byte flag = buffer.get();
+		// 键的长度
+		int keyCount = buffer.getInt();
+		// 键的长度 + Value的版本树的根节点 + 当前Key的版本 + 最新版本的Value记录地址
+		int readLength = keyCount + 8 + 4 + 8;
+		ByteBuffer buf = ByteBuffer.allocate(readLength);
+		blockChannel.read(buf, offset, true);
+		buf.flip();
+
+		byte[] key = new byte[keyCount];
+		buf.get(key);
+		long revRootNode = buf.getLong();
+		int revision = buf.getInt();
+		long lastestValue = buf.getLong();
+		
+		KeyRecord keyRecord = new KeyRecord(flag, key, revRootNode, revision, lastestValue);
+		return keyRecord;
+	}
+	
+	/**
+	 * 读取ValueRevNode
+	 * @param position 读取的位置
+	 * @return
+	 * @throws IOException
+	 * @throws ChecksumException
+	 */
+	public ValueRevNode readValueRevNode(long position) throws IOException, ChecksumException {
+		// 读取偏移量
+		long offset = position;
+		ByteBuffer buffer = ByteBuffer.allocate(5);
+		blockChannel.read(buffer, offset, true);
+		buffer.flip();
+		offset += buffer.limit();
+		// 是否叶子节点
+		byte leaf = buffer.get();
+		// 键的数量
+		int keyCount = buffer.getInt();
+		int[] revisions = new int[keyCount];
+		ByteBuffer revisionsBuffer = ByteBuffer.allocate(keyCount * 4);
+		blockChannel.read(revisionsBuffer, offset, true);
+		revisionsBuffer.flip();
+		offset += revisionsBuffer.limit();
+		for (int i = 0; i < keyCount; ++i) {
+			revisions[i] = revisionsBuffer.getInt();
+		}
+		// 判断是否是叶子节点以及子树或者键记录的数量
+		int childLenght = (ValueRevNode.LEAF == leaf) ? keyCount : keyCount + 1;
+		long[] childOrKeyAddr = new long[childLenght];
+		// 子树或者Value记录的地址
+		ByteBuffer childAddrBuffer = ByteBuffer.allocate(childLenght * 8);
+		blockChannel.read(childAddrBuffer, offset, true);
+		for (int j = 0; j < childLenght; ++j) {
+			childOrKeyAddr[j] = childAddrBuffer.getLong();
+		}
+		ValueRevNode valueRevNode = new ValueRevNode(leaf, revisions, childOrKeyAddr);
+		return valueRevNode;
+	}
+	
+	/**
+	 * 读取ValueRecord
+	 * @param position 读取的位置
+	 * @return
+	 * @throws IOException
+	 * @throws ChecksumException
+	 */
+	public ValueRecord readValueRecord(long position) throws IOException, ChecksumException {
+		// 读取偏移量
+		long offset = position;
+		ByteBuffer buffer = ByteBuffer.allocate(5);
+		blockChannel.read(buffer, offset, true);
+		buffer.flip();
+		offset += buffer.limit();
+		// 标识符
+		byte flag = buffer.get();
+		// Value长度
+		int valueLength = buffer.getInt();
+		// Value长度 + 当前Value的版本
+		int readLength = valueLength + 4;
+		ByteBuffer buf = ByteBuffer.allocate(readLength);
+		blockChannel.read(buf, offset, true);
+		buf.flip();
+		byte[] value = new byte[valueLength];
+		buf.get(value);
+		int revision = buf.getInt();
+		ValueRecord keyRecord = new ValueRecord(flag, value, revision);
+		return keyRecord;
+	}
 }
