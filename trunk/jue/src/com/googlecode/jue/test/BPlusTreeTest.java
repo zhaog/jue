@@ -1,5 +1,6 @@
 package com.googlecode.jue.test;
 
+import java.io.Serializable;
 import java.util.Random;
 
 import com.googlecode.jue.bplustree.BNode;
@@ -10,9 +11,10 @@ import com.googlecode.jue.bplustree.TreeCallBack;
 public class BPlusTreeTest {
 
 	/**
-	 * @param args
-	 */
-	public static void main(String[] args) {
+	* @param args
+	 * @throws CloneNotSupportedException 
+	*/
+	public static void main(String[] args) throws CloneNotSupportedException {
 //		BPlusTree<Integer, String> tree = new BPlusTree<Integer, String>(2);
 		CopyOnWriteBPlusTree<Integer, String> tree = new CopyOnWriteBPlusTree<Integer, String>(2);
 		System.out.println(tree);
@@ -59,8 +61,8 @@ public class BPlusTreeTest {
 			}
 
 			@Override
-			public void completed() {
-				System.out.println("completed:");
+			public void nodeNotChanged(BNode<Integer, String> node) {
+				System.out.println("nodeNotChanged:" + node.toString());
 			}
 
 			@Override
@@ -76,19 +78,37 @@ public class BPlusTreeTest {
 									"\n\trightNode:" + rightNode.toString());
 			}
 		};
-		for (int i = 1; i <= 20; ++i) {
-			System.out.println(">>>>put " + i + ":'" + i + "'");
-//			tree.put(i, i + "", callBack);
-			tree.put(i, i + "");
-//			System.out.println(tree);
+		for (int i = 1; i <= 100; ++i) {
+//			int j = new Random().nextInt(100);
+			int j = i;
+			System.out.println(">>>>put " + j + ":'" + j + "'");
+//			tree.put(j, j + "", callBack);
+			tree.put(j, j + "");
+			System.out.println(tree);
 		}
 		System.out.println(tree);
 		
-//		System.out.println("=====delete 1~20");
-		for (int i = 10; i >0; --i) {
-			int j = new Random().nextInt(20);
+//		System.out.println("==========clone");
+//		BPlusTree<Integer, String> newTree = tree.clone();
+//		System.out.println(newTree);
+//		traverseLeaf(tree);
+		
+//		System.out.println(">>>>delete " + 2);
+//		tree.delete(2, callBack);
+//		System.out.println(tree);
+//		
+//		System.out.println(">>>>delete " + 16);
+//		tree.delete(16, callBack);
+//		System.out.println(tree);
+		
+		
+		System.out.println("=====delete 1~100");
+		for (int i = 100; i > 0; --i) {
+			int j = new Random().nextInt(100);
+			
 			System.out.println(">>>>delete " + j);
-			tree.delete(j, callBack);
+//			tree.delete(j, callBack);
+			tree.delete(j);
 			System.out.println(tree);
 		}
 		
@@ -122,16 +142,20 @@ public class BPlusTreeTest {
 //			System.out.println(tree);
 //		}
 //		System.out.println(tree.search(6));
-		
+
+//		traverseLeaf(tree);
+	}
+	
+	private static <K extends Comparable<K>, V extends Serializable> void traverseLeaf(CopyOnWriteBPlusTree<K, V> tree) {
 		System.out.println("=======顺序遍历");
-		BNode<Integer, String> firstNode = tree.getFirstLeafNode();
+		BNode<K, V> firstNode = tree.getFirstLeafNode();
 		do {
 			System.out.println(firstNode);
 			firstNode = firstNode.getNextNode();
 		} while (firstNode != null);
 		
 		System.out.println("=======倒序遍历");
-		BNode<Integer, String> lastNode = tree.getLastLeafNode();
+		BNode<K, V> lastNode = tree.getLastLeafNode();
 		do {
 			System.out.println(lastNode);
 			lastNode = lastNode.getPrevNode();
@@ -151,19 +175,19 @@ public class BPlusTreeTest {
 			// 中间索引
 			mid = (low + high) >>> 1;
 			Integer midVal = array[mid];
-		    cmp = midVal.compareTo(key);
-		    if (cmp < 0) {// 大于中间关键字，查找后半部分
-		    	low = mid + 1;
-		    } else if (cmp > 0) {// 小于中间关键字，查找前半部分
-		    	high = mid - 1;
-		    } else {// 查找到
-		    	if (foundEquel) {
-		    		return mid;
-		    	} else {
-		    		return mid + 1;
-		    	}
-		    	
-		    }
+		   cmp = midVal.compareTo(key);
+		   if (cmp < 0) {// 大于中间关键字，查找后半部分
+		   	low = mid + 1;
+		   } else if (cmp > 0) {// 小于中间关键字，查找前半部分
+		   	high = mid - 1;
+		   } else {// 查找到
+		   	if (foundEquel) {
+		   		return mid;
+		   	} else {
+		   		return mid + 1;
+		   	}
+		   	
+		   }
 		}
 		// key not found.
 		if (cmp > 0) {
@@ -175,3 +199,4 @@ public class BPlusTreeTest {
 	}
 
 }
+
