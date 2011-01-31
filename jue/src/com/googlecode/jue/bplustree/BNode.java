@@ -9,9 +9,9 @@ import java.util.Arrays;
  * @author noah
  *
  */
-public class BNode<K extends Comparable<K>, V extends Serializable> {
+public class BNode<K extends Comparable<K>, V extends Serializable> implements Cloneable {
 	
-	private BPlusTree<K, V> tree;
+	BPlusTree<K, V> tree;
 	
 	/**
 	* 最大键数量
@@ -26,7 +26,7 @@ public class BNode<K extends Comparable<K>, V extends Serializable> {
 	/**
 	* 当前内部键的个数
 	*/
-	private int count;
+	int count;
 	
 	/**
 	* 是否是叶节点
@@ -46,12 +46,17 @@ public class BNode<K extends Comparable<K>, V extends Serializable> {
 	/**
 	* 右兄弟节点
 	*/
-	private BNode<K, V> nextNode;
+	BNode<K, V> nextNode;
 	
 	/**
 	* 左兄弟节点
 	*/
-	private BNode<K, V> prevNode;
+	BNode<K, V> prevNode;
+	
+	/**
+	 * 节点在文件中的位置
+	 */
+	private long position;
 	
 	/**
 	* 最小节点数
@@ -97,12 +102,12 @@ public class BNode<K extends Comparable<K>, V extends Serializable> {
 	}
 
 	/**
-	 * 添加关键字
-	 * @param key
-	 * @param value
-	 * @param callback
-	 * @return
-	 */
+	* 添加关键字
+	* @param key
+	* @param value
+	* @param callback
+	* @return
+	*/
 	boolean put(K key, V value, TreeCallBack<K, V> callback) {
 		PutReturnValue pValue = putImpl(new InnerNode(key, value), callback);
 		boolean success = pValue.success;
@@ -124,26 +129,24 @@ public class BNode<K extends Comparable<K>, V extends Serializable> {
 			}
 			success = true;
 		}
-		// 调用回调函数
-		if (callback != null) {
-			callback.completed();
-		}
 		return success;
 	}
 
 	/**
 	* 添加关键字的实现方法
 	* @param innerNode 需要添加的内部节点
-	 * @param callback 
+	* @param callback 
 	* @return
 	*/
 	private PutReturnValue putImpl(InnerNode innerNode, TreeCallBack<K, V> callback) {
-		SearchResult result = searchKey(innerNode.getKey(), isLeaf());
 		// 往下遍历的子树的索引，或者插入覆盖的位置
-		int i = result.index;
+		int i = 0;
 		PutReturnValue retValue = null;
 		if (isLeaf()) {// 当前是叶节点，不用再向下遍历
+			SearchResult result = searchKeyInLeaf(innerNode.getKey());
+			i = result.index;
 			if (result.found) {// 已经存在该键，覆盖该节点的值
+				i = result.index;
 				this.innerNodes[i] = innerNode;
 				// 调用回调函数
 				if (callback != null) {
@@ -159,6 +162,8 @@ public class BNode<K extends Comparable<K>, V extends Serializable> {
 			// 更新树的键的总数
 			tree.keySum++;
 		} else {// 非叶节点，遍历相应的子树
+			SearchResult result = searchKey(innerNode.getKey());
+			i = result.index;
 			BNode<K, V> bNode = this.childNodes[i];
 			retValue = bNode.putImpl(innerNode, callback);
 		}
@@ -171,6 +176,10 @@ public class BNode<K extends Comparable<K>, V extends Serializable> {
 		BNode<K, V> childNode = retValue.childNode;
 		// 没有需要插入的内部节点，直接返回
 		if (iNode == null) {
+			// 调用回调函数
+			if (callback != null) {
+				callback.nodeNotChanged(this);
+			}
 			return retValue;
 		}
 		// 未满，则直接插入节点
@@ -267,8 +276,8 @@ public class BNode<K extends Comparable<K>, V extends Serializable> {
 				}
 				// 将需要插入的新内部节点和子树插入到新的节点中
 				insInNode(i, iNode, childNode);
-				// 转移后，节点中的最右内部节点作为需要向上插入的内部节点传递给父节点
-				newInnerNode = new InnerNode(this.innerNodes[this.min].getKey(), null);
+				// 将新节点的第一个值作为需要向上插入的内部节点，节点的值可以为空
+				newInnerNode = new InnerNode(newNode.innerNodes[0].getKey(), null);
 				// 更新键数量
 				this.count = this.min + 1;
 				newNode.count = this.min;
@@ -335,7 +344,8 @@ public class BNode<K extends Comparable<K>, V extends Serializable> {
 	*/
 	private void insInNode(int index, InnerNode newInnerNode, BNode<K, V> childNode) {
 		// 将大于插入键的内部节点和子节点向后移一位
-		for (int i = this.count - 1; i >= index; --i) {
+		int start = (this.count == this.innerNodes.length) ? this.count - 2 : this.count - 1;
+		for (int i = start; i >= index; --i) {
 			this.innerNodes[i + 1] = this.innerNodes[i];
 			this.childNodes[i + 2] = this.childNodes[i + 1];
 		}
@@ -353,24 +363,24 @@ public class BNode<K extends Comparable<K>, V extends Serializable> {
 	*/
 	public V search(K key) {
 		if (this.isLeaf()) {// 叶节点，直接在本节点中查找
-			SearchResult result = searchKey(key, true);
+			SearchResult result = searchKeyInLeaf(key);
 			if (result.found) {
 				return this.innerNodes[result.index].getValue();
 			}
-			return null;
 		} else {// 非叶节点，查找相关的子节点
-			SearchResult result = searchKey(key, false);
+			SearchResult result = searchKey(key);
 			BNode<K, V> bNode = this.childNodes[result.index];
 			return bNode.search(key);
 		}
+		return null;
 	}
 	
 	/**
-	 * 删除键
-	 * @param key
-	 * @param callback
-	 * @return
-	 */
+	* 删除键
+	* @param key
+	* @param callback
+	* @return
+	*/
 	boolean delete(K key, TreeCallBack<K, V> callback) {
 		DeleteReturnValue dValue = deleteImpl(key, callback);
 		boolean success = dValue.success;
@@ -390,12 +400,15 @@ public class BNode<K extends Comparable<K>, V extends Serializable> {
 			success = true;
 		} else {
 			// 调用回调函数
-			if (dValue.deleteOrUpdate && callback != null) {
-				callback.nodeUpdated(this);
+			if (dValue.deleteOrUpdate) {
+				if (callback != null) {
+					callback.nodeUpdated(this);
+				}
+			} else {
+				if (callback != null) {
+					callback.nodeNotChanged(this);
+				}
 			}
-		}
-		if (callback != null) {
-			callback.completed();
 		}
 		return success;
 	}
@@ -403,7 +416,7 @@ public class BNode<K extends Comparable<K>, V extends Serializable> {
 	/**
 	* 删除方法的实现
 	* @param key
-	 * @param callback 
+	* @param callback 
 	* @return
 	*/
 	
@@ -414,14 +427,17 @@ public class BNode<K extends Comparable<K>, V extends Serializable> {
 			retValue = new DeleteReturnValue();
 			retValue.success = true;
 			// 内部节点遍历
-			SearchResult result = searchKey(key, true);
+			SearchResult result = searchKeyInLeaf(key);
 			i = result.index;
 			if (!result.found) {
 				retValue.success = false;
+				if (callback != null) {
+					callback.nodeNotChanged(this);
+				}
 				return retValue;
 			}
 		} else {// 非叶节点，遍历相应的子树
-			SearchResult result = searchKey(key, false);
+			SearchResult result = searchKey(key);
 			i = result.index;
 			BNode<K, V> bNode = this.childNodes[result.index];
 			retValue = bNode.deleteImpl(key, callback);
@@ -444,6 +460,10 @@ public class BNode<K extends Comparable<K>, V extends Serializable> {
 		}
 		// 直接子节点未删除或者更新
 		if (!retValue.deleteOrUpdate) {
+			// 调用回调函数
+			if (callback != null) {
+				callback.nodeNotChanged(retValue.childNode);
+			}
 			return returnValue;
 		}
 		//判断发生删除的子树的状态
@@ -617,9 +637,9 @@ public class BNode<K extends Comparable<K>, V extends Serializable> {
 				leftNode.innerNodes[i] = rightNode.innerNodes[j];
 			}
 			// 把右子树中的所有键值左移 moveCount 个位置
-			for (int r = 0; r < rightNode.count; ++r) {
-				rightNode.innerNodes[r] = rightNode.innerNodes[r + moveCount];
-				rightNode.innerNodes[r + moveCount] = null;
+			for (int r = moveCount; r < rightNode.count; ++r) {
+				rightNode.innerNodes[r - moveCount] = rightNode.innerNodes[r];
+				rightNode.innerNodes[r] = null;
 			}
 			// 更新父节点的边界值
 			this.innerNodes[keyIndex] = new InnerNode(rightNode.innerNodes[0].getKey(), null);
@@ -639,11 +659,11 @@ public class BNode<K extends Comparable<K>, V extends Serializable> {
 			// 先将最左子树移动
 			rightNode.childNodes[0] = rightNode.childNodes[moveCount];
 			// 移动剩余键和子树
-			for (int r = 0; r < rightNode.count; ++r) {
-				rightNode.innerNodes[r] = rightNode.innerNodes[r + moveCount];
-				rightNode.childNodes[r + 1] = rightNode.childNodes[r + moveCount + 1];
-				rightNode.innerNodes[r + moveCount] = null;
-				rightNode.childNodes[r + moveCount + 1] = null;
+			for (int r = moveCount; r < rightNode.count; ++r) {
+				rightNode.innerNodes[r - moveCount] = rightNode.innerNodes[r];
+				rightNode.childNodes[r - moveCount + 1] = rightNode.childNodes[r + 1];
+				rightNode.innerNodes[r] = null;
+				rightNode.childNodes[r + 1] = null;
 			}
 		}
 		// 更新键数量
@@ -690,13 +710,20 @@ public class BNode<K extends Comparable<K>, V extends Serializable> {
 		this.count--;
 	}
 	
+	public long getPosition() {
+		return position;
+	}
+
+	public void setPosition(long position) {
+		this.position = position;
+	}
+
 	/**
-	 * 二分法查找
-	 * @param key
-	 * @param foundEquel 是否需要查找关键字相等的键
-	 * @return
-	 */
-	private SearchResult searchKey(K key, boolean foundEquel) {
+	* 二分法查找，在叶子节点中查找更新位置
+	* @param key
+	* @return
+	*/
+	private SearchResult searchKeyInLeaf(K key) {
 		// 起点
 		int low = 0;
 		// 终点
@@ -711,32 +738,86 @@ public class BNode<K extends Comparable<K>, V extends Serializable> {
 			mid = (low + high) >>> 1;
 			InnerNode midInnerNode = this.innerNodes[mid];
 			K midKey = midInnerNode.getKey();
-		    cmp = midKey.compareTo(key);
-		    if (cmp < 0) {// 大于中间关键字，查找后半部分
-		    	low = mid + 1;
-		    } else if (cmp > 0) {// 小于中间关键字，查找前半部分
-		    	high = mid - 1;
-		    } else {// 查找到
-		    	if (foundEquel) {// 需要查找关键字相同的节点
-		    		result.found = true;
-		    		result.index = mid;
-		    	} else {// 查找需要向下遍历的子树索引
-		    		result.found = false;
-		    		result.index = mid + 1;
-		    	}
-		    	return result; 
-		    }
+			cmp = midKey.compareTo(key);
+			if (cmp < 0) {// 大于中间关键字，查找后半部分
+				low = mid + 1;
+			} else if (cmp > 0) {// 小于中间关键字，查找前半部分
+				high = mid - 1;
+			} else {// 查找到
+				result.found = true;
+				result.index = mid;
+				return result;
+			}
 		}
 		// 未找到
 		result.found = false;
-		if (cmp > 0) {// 小于最后一次比较的键
-			result.index = mid;
-		} else {// 大于最后一次比较的键
-			result.index = mid + 1; 
-		}
+		// 小于最后一次比较的键，则当前mid为插入的位置，否则返回mid + 1
+		result.index = (cmp > 0) ? mid : mid + 1;
 		return result;
 	}
 	
+	/**
+	* 二分法查找，在非叶子节点中查找
+	* @param key
+	* @return
+	*/
+	private SearchResult searchKey(K key) {
+		// 起点
+		int low = 0;
+		// 终点
+		int high = this.count - 1;
+		SearchResult result = new SearchResult();
+		// 中间索引
+		int mid = -1;
+		// 比较结果
+		int cmp = 0;
+		while (low <= high) {
+			// 中间索引
+			mid = (low + high) >>> 1;
+			InnerNode midInnerNode = this.innerNodes[mid];
+			K midKey = midInnerNode.getKey();
+			cmp = midKey.compareTo(key);
+			if (cmp < 0) {// 大于中间关键字，查找后半部分
+				low = mid + 1;
+			} else if (cmp > 0) {// 小于中间关键字，查找前半部分
+				high = mid - 1;
+			} else {// 查找到
+				result.found = true;
+		   		result.index = mid + 1;
+				return result;
+			}
+		}
+		// 未找到
+		result.found = false;
+		// 小于最后一次比较的键，则当前mid为插入的位置，否则返回mid + 1
+		result.index = (cmp > 0) ? mid : mid + 1;
+		return result;
+	}
+	
+	/**
+	 * 复制该节点，会遍历复制子节点，但是不会更新更新对兄弟节点的引用，兄弟节点的引用为空。
+	 * <br>对于内部节点K、V，因为是泛型，所以没有对他们进行复制操作。
+	 */
+	@Override
+	public BNode<K, V> clone() throws CloneNotSupportedException {
+		BNode<K, V> newNode = new BNode<K, V>(null, this.min, this.leaf);
+		newNode.count = this.count;
+		newNode.position = this.position;
+		// 复制内部节点
+		for (int i = 0; i < this.count; ++i) {
+			BNode<K , V>.InnerNode oldInnerNode = this.innerNodes[i];
+			newNode.innerNodes[i] = newNode.new InnerNode(oldInnerNode.getKey(), oldInnerNode.getValue());
+		}
+		if (!isLeaf()) {
+			// 复制子节点
+			for (int i = 0; i < this.count + 1; ++i) {
+				BNode<K , V> oldChildNode = this.childNodes[i];
+				newNode.childNodes[i] = oldChildNode.clone();
+			}
+		}
+		return newNode;
+	}
+
 	@Override
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
@@ -769,19 +850,19 @@ public class BNode<K extends Comparable<K>, V extends Serializable> {
 	}
 	
 	/**
-	 * 查询结果类
-	 * @author Noah
-	 *
-	 */
+	* 查询结果类
+	* @author Noah
+	*
+	*/
 	private final class SearchResult {
 		/**
-		 * 是否查找到相应的关键字
-		 */
+		* 是否查找到相应的关键字
+		*/
 		public boolean found = false;
 		
 		/**
-		 * 子节点索引或者键的索引
-		 */
+		* 子节点索引或者键的索引
+		*/
 		public int index;
 	}
 	
@@ -790,7 +871,7 @@ public class BNode<K extends Comparable<K>, V extends Serializable> {
 	* @author noah
 	*
 	*/
-	public final class InnerNode {
+	public final class InnerNode implements Cloneable {
 
 		/**
 		* 关键字
@@ -869,4 +950,6 @@ public class BNode<K extends Comparable<K>, V extends Serializable> {
 		public BNode<K, V> childNode;
 	}
 }
+
+
 

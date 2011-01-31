@@ -1,6 +1,3 @@
-/**
- * 
- */
 package com.googlecode.jue.bplustree;
 
 import java.io.Serializable;
@@ -12,8 +9,8 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public class CopyOnWriteBPlusTree<K extends Comparable<K>, V extends Serializable> {
 	/**
-	 * 访问锁
-	 */
+	* 访问锁
+	*/
     private final ReentrantLock lock = new ReentrantLock();
 
     /**
@@ -30,9 +27,9 @@ public class CopyOnWriteBPlusTree<K extends Comparable<K>, V extends Serializabl
     }
     
     /**
-	 * 返回最小关键字数
-	 * @return
-	 */
+	* 返回最小关键字数
+	* @return
+	*/
 	public int getM() {
 		return tree.getM();
 	}
@@ -58,22 +55,22 @@ public class CopyOnWriteBPlusTree<K extends Comparable<K>, V extends Serializabl
 	}
 
 	/**
-	 * 插入新键值
-	 * @param key
-	 * @param value
-	 * @return
-	 */
+	* 插入新键值
+	* @param key
+	* @param value
+	* @return
+	*/
 	public boolean put(K key, V value) {
 		return put(key, value, null);
 	}
 	
 	/**
-	 * 插入新键值
-	 * @param key
-	 * @param value
-	 * @param callback
-	 * @return
-	 */
+	* 插入新键值
+	* @param key
+	* @param value
+	* @param callback
+	* @return
+	*/
 	public boolean put(K key, V value, TreeCallBack<K, V> callback) {
 		final ReentrantLock lock = this.lock;
 		lock.lock();
@@ -83,53 +80,49 @@ public class CopyOnWriteBPlusTree<K extends Comparable<K>, V extends Serializabl
 			boolean result = newTree.put(key, value, callback);
 			// 替换原先的树
 			tree = newTree;
-		    return result;
+		   return result;
 		} finally {
-		    lock.unlock();
+		   lock.unlock();
 		}
-	}
-	
-	/**
-	 * 复制当前树
-	 * @return
-	 */
-	private BPlusTree<K, V> createNewTree() {
-		BPlusTree<K, V> newTree = new BPlusTree<K, V>(getM());
-		//遍历叶节点
-		BNode<K, V> node = tree.getFirstLeafNode();
-		do {
-			BNode<K, V>.InnerNode[] innerNodes = node.getInnerNodes();
-			for (int i = 0; i < innerNodes.length; ++i) {
-				newTree.put(innerNodes[i].getKey(), innerNodes[i].getValue());
-			}
-			node = node.getNextNode();
-		} while (node != null);
-		return newTree;
 	}
 
 	/**
-	 * 查找对应值
-	 * @param key
-	 * @return
-	 */
+	* 复制当前树
+	* @return
+	*/
+	private BPlusTree<K, V> createNewTree() {
+		try {
+			BPlusTree<K, V> newTree = tree.clone();
+			return newTree;
+		} catch (CloneNotSupportedException e) {
+			throw new RuntimeException("clone tree failed");
+		}
+		
+	}
+
+	/**
+	* 查找对应值
+	* @param key
+	* @return
+	*/
 	public V get(K key) {
 		return tree.get(key);
 	}
 	
 	/**
-	 * 删除对应的键和值
-	 * @param key
-	 * @return
-	 */
+	* 删除对应的键和值
+	* @param key
+	* @return
+	*/
 	public boolean delete(K key) {
 		return delete(key, null);
 	}
 	
 	/**
-	 * 删除对应的键和值
-	 * @param key
-	 * @return
-	 */
+	* 删除对应的键和值
+	* @param key
+	* @return
+	*/
 	public boolean delete(K key, TreeCallBack<K, V> callback) {
 		final ReentrantLock lock = this.lock;
 		lock.lock();
@@ -139,9 +132,9 @@ public class CopyOnWriteBPlusTree<K extends Comparable<K>, V extends Serializabl
 			boolean result = newTree.delete(key, callback);
 			// 替换原先的树
 			tree = newTree;
-		    return result;
+		   return result;
 		} finally {
-		    lock.unlock();
+		   lock.unlock();
 		}
 	}
 
