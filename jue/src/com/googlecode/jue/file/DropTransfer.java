@@ -41,9 +41,7 @@ public class DropTransfer {
 		
 		buffer.putLong(header.getFileTail());
 		buffer.putInt(header.getKeyTreeMin());
-		buffer.put(header.getKeyType());
 		buffer.putInt(header.getValueRevTreeMin());
-		buffer.put(header.getValueRevType());
 		buffer.put(header.getValueCompressed());
 		buffer.put(header.getCompressionCodec());
 		buffer.flip();
@@ -181,18 +179,14 @@ public class DropTransfer {
 		buffer.flip();
 		long fileTail = buffer.getLong();
 		int keyTreeMin = buffer.getInt();
-		byte keyType = buffer.get();
 		int valueRevTreeMin = buffer.getInt();
-		byte valueRevType = buffer.get();
 		byte valueCompressed = buffer.get();
 		byte compressionCodec = buffer.get();
 		
 		FileHeader header = new FileHeader();
 		header.setFileTail(fileTail);
 		header.setKeyTreeMin(keyTreeMin);
-		header.setKeyType(keyType);
 		header.setValueRevTreeMin(valueRevTreeMin);
-		header.setValueRevType(valueRevType);
 		header.setValueCompressed(valueCompressed);
 		header.setCompressionCodec(compressionCodec);
 		
@@ -261,7 +255,7 @@ public class DropTransfer {
 			keyLengthBuffer.clear();
 		}
 		// 判断是否是叶子节点以及子树或者键记录的数量
-		int childLenght = (KeyNode.LEAF == leaf) ? keyCount : keyCount + 1;
+		int childLenght = (KeyNode.TRUE_BYTE == leaf) ? keyCount : keyCount + 1;
 		long[] childOrKeyAddr = new long[childLenght];
 		// 子树或者键记录的地址
 		ByteBuffer childAddrBuffer = ByteBuffer.allocate(childLenght * 8);

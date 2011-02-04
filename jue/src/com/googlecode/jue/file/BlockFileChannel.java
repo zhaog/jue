@@ -33,6 +33,11 @@ public class BlockFileChannel {
 	 * 校验码存储文件的后缀
 	 */
 	public static final String BLOCK_SUFFIX = ".bck";
+	
+	/**
+	 * 默认的文件块大小
+	 */
+	public static final int DEFAULT_BLOCK_SIZE = 4096;
 
 	/**
 	 * 文件Channel对象
@@ -63,7 +68,20 @@ public class BlockFileChannel {
 	 * 校验码生成器
 	 */
 	private ChecksumGenerator checksumGenerator;
-
+	
+	/**
+	 * 构造一个BlockFileChannel
+	 * 
+	 * @param file
+	 *            文件对象
+	 * @param checksumGenerator
+	 *            校验码生成器
+	 * @throws FileNotFoundException
+	 */
+	public BlockFileChannel(File file, ChecksumGenerator checksumGenerator) {
+		this(file, DEFAULT_BLOCK_SIZE, false, checksumGenerator);
+	}
+	
 	/**
 	 * 构造一个BlockFileChannel
 	 * 
@@ -75,8 +93,8 @@ public class BlockFileChannel {
 	 *            校验码生成器
 	 * @throws FileNotFoundException
 	 */
-	public BlockFileChannel(File file, int blockSize, ChecksumGenerator checksumGenerator) throws FileNotFoundException {
-		this(file, blockSize, false, checksumGenerator);
+	public BlockFileChannel(File file, int blockSize, ChecksumGenerator checksumGenerator) {
+		this(file, blockSize, true, checksumGenerator);
 	}
 
 	/**
@@ -90,8 +108,8 @@ public class BlockFileChannel {
 	 *            校验码生成器
 	 * @throws FileNotFoundException
 	 */
-	public BlockFileChannel(String filePath, int blockSize, ChecksumGenerator checksumGenerator) throws FileNotFoundException {
-		this(filePath, blockSize, false, checksumGenerator);
+	public BlockFileChannel(String filePath, int blockSize, ChecksumGenerator checksumGenerator) {
+		this(filePath, blockSize, true, checksumGenerator);
 	}
 
 	/**
@@ -108,7 +126,7 @@ public class BlockFileChannel {
 	 * @throws FileNotFoundException
 	 *             文件不存在
 	 */
-	public BlockFileChannel(String filePath, int blockSize, boolean blockCache, ChecksumGenerator checksumGenerator) throws FileNotFoundException {
+	public BlockFileChannel(String filePath, int blockSize, boolean blockCache, ChecksumGenerator checksumGenerator) {
 		this(new File(filePath), blockSize, blockCache, checksumGenerator);
 	}
 
@@ -126,14 +144,17 @@ public class BlockFileChannel {
 	 * @throws FileNotFoundException
 	 *             文件不存在
 	 */
-	public BlockFileChannel(File file, int blockSize, boolean blockCache, ChecksumGenerator checksumGenerator) throws FileNotFoundException {
-		super();
-		RandomAccessFile raf = new RandomAccessFile(file, "rw");
-		this.fileChannel = raf.getChannel();
-		
-		File blockchkFile = new File(file.getName() + BLOCK_SUFFIX);
-		RandomAccessFile blockchkFileRaf = new RandomAccessFile(blockchkFile, "rw");
-		this.blockChecksumChannel = blockchkFileRaf.getChannel();
+	public BlockFileChannel(File file, int blockSize, boolean blockCache, ChecksumGenerator checksumGenerator) {
+		try {
+			RandomAccessFile raf = new RandomAccessFile(file, "rw");
+			this.fileChannel = raf.getChannel();
+			
+			File blockchkFile = new File(file.getName() + BLOCK_SUFFIX);
+			RandomAccessFile blockchkFileRaf = new RandomAccessFile(blockchkFile, "rw");
+			this.blockChecksumChannel = blockchkFileRaf.getChannel();
+		} catch (FileNotFoundException e) {
+			// 不会抛出该异常
+		}
 			
 		this.blockSize = blockSize;
 		this.blockCache = blockCache;
@@ -400,7 +421,9 @@ public class BlockFileChannel {
 				// 第一个数据块更新位置
 				int pos = (int) (position % blockSize);
 				buffer.position(pos);
-				dataBuffer.limit(blockSize - pos);
+				if (dataBuffer.remaining() > buffer.remaining()) {
+					dataBuffer.limit(buffer.remaining());
+				}
 			} else if (i == blockIndexes.length - 1) {// 最后一个数据块
 				dataBuffer.limit(oldLimit);
 			} else {
