@@ -374,7 +374,8 @@ public class BNode<K extends Comparable<K>, V extends Serializable> implements C
 		}
 		return null;
 	}
-	
+
+
 	/**
 	* 删除键
 	* @param key
@@ -430,10 +431,8 @@ public class BNode<K extends Comparable<K>, V extends Serializable> implements C
 			SearchResult result = searchKeyInLeaf(key);
 			i = result.index;
 			if (!result.found) {
+				retValue.childNode = this;
 				retValue.success = false;
-				if (callback != null) {
-					callback.nodeNotChanged(this);
-				}
 				return retValue;
 			}
 		} else {// 非叶节点，遍历相应的子树
@@ -444,9 +443,14 @@ public class BNode<K extends Comparable<K>, V extends Serializable> implements C
 		}
 		// 子树删除失败，直接返回
 		if (!retValue.success) {
+			// 调用回调函数
+			if (callback != null) {
+				callback.nodeNotChanged(retValue.childNode);
+			}
 			return retValue;
 		}
 		DeleteReturnValue returnValue = new DeleteReturnValue();
+		returnValue.childNode = this;
 		// success表示下面所有的子节点是否存在删除成功的
 		returnValue.success = retValue.success;
 		if (isLeaf()) {// 当前节点为叶节点，删除对应的键
@@ -455,7 +459,6 @@ public class BNode<K extends Comparable<K>, V extends Serializable> implements C
 			tree.keySum--;
 			returnValue.success = true;
 			returnValue.deleteOrUpdate = true;
-			returnValue.childNode = this;
 			return returnValue;
 		}
 		// 直接子节点未删除或者更新
@@ -517,14 +520,14 @@ public class BNode<K extends Comparable<K>, V extends Serializable> implements C
 					callback.nodeMerge(n);
 				}
 			}
-			// 无论是拆解还是合并，边界值，即当前键都发生变化
+			// 删除内部节点，以及无论是拆解还是合并，都产生了更新操作
 			returnValue.deleteOrUpdate = true;
 		} else {
-			// 调用回调函数
-			if (callback != null) {
-				callback.nodeUpdated(childNode);
-			}
+			// 是否需要更新边界值
 			returnValue.deleteOrUpdate = checkBoundaryValue(i, childNode);
+			if (callback != null) {
+				callback.nodeUpdated(retValue.childNode);
+			}
 		}
 		returnValue.childNode = this;
 		return returnValue;

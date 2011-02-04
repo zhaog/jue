@@ -16,10 +16,10 @@ public class FileHeader implements ADrop {
 	private static final long serialVersionUID = -2193314360648043655L;
 	
 	/**
-	 * FileHeader的长度，20个字节
+	 * FileHeader的长度，18个字节
 	 */
-	public static final int HEADER_LENGHT = 20;
-
+	public static final int HEADER_LENGHT = 18;
+	
 	/**
 	 * 文件尾的位置
 	 */
@@ -31,19 +31,9 @@ public class FileHeader implements ADrop {
 	private int keyTreeMin;
 	
 	/**
-	 * 主键的类型，0代表String，1代表int，2代表float
-	 */
-	private byte keyType;
-	
-	/**
 	 * value的版本树的最小关键字数
 	 */
 	private int valueRevTreeMin;
-	
-	/**
-	 * 版本树的主键的类型，0代表String，1代表int，2代表float
-	 */
-	private byte valueRevType;
 	
 	/**
 	 * Value是否压缩
@@ -79,22 +69,6 @@ public class FileHeader implements ADrop {
 		return valueRevTreeMin;
 	}
 
-	public byte getValueRevType() {
-		return valueRevType;
-	}
-
-	public void setValueRevType(byte valueRevType) {
-		this.valueRevType = valueRevType;
-	}
-
-	public byte getKeyType() {
-		return keyType;
-	}
-
-	public void setKeyType(byte keyType) {
-		this.keyType = keyType;
-	}
-
 	public void setValueRevTreeMin(int valueRevTreeMin) {
 		this.valueRevTreeMin = valueRevTreeMin;
 	}
@@ -118,8 +92,8 @@ public class FileHeader implements ADrop {
 	@Override
 	public String toString() {
 		return "FileHeader [fileTail=" + fileTail + ", keyTreeMin="
-				+ keyTreeMin + ", keyType=" + keyType + ", valueRevTreeMin="
-				+ valueRevTreeMin + ", valueRevType=" + valueRevType
+				+ keyTreeMin + ", valueRevTreeMin="
+				+ valueRevTreeMin
 				+ ", valueCompressed=" + valueCompressed
 				+ ", compressionCodec=" + compressionCodec + "]";
 	}
