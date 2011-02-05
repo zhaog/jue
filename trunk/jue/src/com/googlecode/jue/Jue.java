@@ -52,7 +52,7 @@ public class Jue {
 	/**
 	 * key的树索引
 	 */
-	private CopyOnWriteBPlusTree<String, KeyRecord> keyTree;
+	private CopyOnWriteBPlusTree<String, Long> keyTree;
 	
 	/**
 	 * 文件头信息
@@ -101,7 +101,7 @@ public class Jue {
 	 * @param keyTreeMin
 	 */
 	private void initTree(int keyTreeMin) {
-		keyTree = new CopyOnWriteBPlusTree<String, KeyRecord>(keyTreeMin);
+		keyTree = new CopyOnWriteBPlusTree<String, Long>(keyTreeMin);
 		// TODO init tree
 	}
 
@@ -142,16 +142,23 @@ public class Jue {
 	 * @return 返回操作成功后，数据的版本号
 	 */
 	public int put(String key, DocObject docObj, int requireRev) {
-		if (requireRev >=0) {
-			checkRev(key, requireRev);
+		readLock.lock();
+		try {
+			if (requireRev >= 0) {
+				checkRev(key, requireRev);
+			}
+			
+			// TODO do Put
+			
+			return 0;
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		} finally {
+			readLock.unlock();
 		}
-		
-		// TODO do Put
-		
-		return 0;
 	}
 
-	private void checkRev(String key, int requireRev) {
+	private void checkRev(String key, int requireRev) throws IOException, ChecksumException {
 		int currentRev = getCurrentRev(key);
 		if (currentRev >= 0 && currentRev != requireRev) {
 			throw new RevisionInvalidException();
@@ -162,16 +169,19 @@ public class Jue {
 	 * 获取key对应的当前版本号，如果该key不存在，则返回-1
 	 * @param key
 	 * @return key对应的当前版本号，或者key不存在则返回-1
+	 * @throws ChecksumException 
+	 * @throws IOException 
 	 */
-	private int getCurrentRev(String key) {
+	private int getCurrentRev(String key) throws IOException, ChecksumException {
 		// 从缓存获取当前记录
 		CacheObject cacheObj = cache.get(key);
 		if (cacheObj != null) {
 			return cacheObj.currentRev;
 		}
 		// 缓存不存在，从索引中获取key信息
-		KeyRecord record = keyTree.get(key);
-		if (record != null) {
+		Long recordAddr = keyTree.get(key);
+		if (recordAddr != null) {
+			KeyRecord record = dropTransfer.readKeyRecord(recordAddr.longValue());
 			return record.getRevision();
 		}
 		// 该key不存在，返回-1
