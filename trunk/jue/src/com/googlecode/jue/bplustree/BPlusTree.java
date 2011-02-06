@@ -91,6 +91,10 @@ public class BPlusTree<K extends Comparable<K>, V extends Serializable> implemen
 		return treeLevel;
 	}
 
+	public BNode<K, V> getRootNode() {
+		return rootNode;
+	}
+	
 	public BNode<K, V> getFirstLeafNode() {
 		return firstLeafNode;
 	}
@@ -163,7 +167,16 @@ public class BPlusTree<K extends Comparable<K>, V extends Serializable> implemen
 		newTree.nodeSum = 0;
 		
 		BNode<K, V> newRootNode = this.rootNode.clone();
-		
+		updateNewTree(newTree, newRootNode);
+		return newTree;
+	}
+
+	/**
+	 * 使用新的根节点更新树信息
+	 * @param newTree
+	 * @param newRootNode
+	 */
+	public void updateNewTree(BPlusTree<K, V> newTree, BNode<K, V> newRootNode) {
 		TraverseInfo info = getNodesInfo(newTree, newRootNode);
 		newTree.rootNode = newRootNode;
 		newTree.keySum = info.keySum;
@@ -172,7 +185,6 @@ public class BPlusTree<K extends Comparable<K>, V extends Serializable> implemen
 		newTree.nodeSum = info.nodeSum;
 		newTree.treeLevel = info.treeLevel;
 		newTree.m = this.m;
-		return newTree;
 	}
 
 	/**

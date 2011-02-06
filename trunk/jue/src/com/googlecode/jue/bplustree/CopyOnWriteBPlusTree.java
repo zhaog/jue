@@ -54,6 +54,10 @@ public class CopyOnWriteBPlusTree<K extends Comparable<K>, V extends Serializabl
 		return tree.getLastLeafNode();
 	}
 
+	public BNode<K, V> getRootNode() {
+		return tree.getRootNode();
+	}
+
 	/**
 	* 插入新键值
 	* @param key
@@ -137,7 +141,21 @@ public class CopyOnWriteBPlusTree<K extends Comparable<K>, V extends Serializabl
 		   lock.unlock();
 		}
 	}
-
+	
+	/**
+	 * 使用新的根节点更新树信息
+	 * @param newTree
+	 * @param newRootNode
+	 */
+	public void updateNewTree(BNode<K, V> newRootNode) {
+		final ReentrantLock lock = this.lock;
+		lock.lock();
+		try {
+			tree.updateNewTree(tree, newRootNode);
+		} finally {
+		   lock.unlock();
+		}
+	}
 	@Override
 	public String toString() {
 		return tree.toString();

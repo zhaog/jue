@@ -49,8 +49,7 @@ public class FileTail implements ADrop {
 		super();
 	}
 
-	public FileTail(int revision, long rootNode, int avgKeyLen,
-			int avgValueLen, int entryCount) {
+	public FileTail(int revision, long rootNode, int avgKeyLen, int avgValueLen, int entryCount) {
 		super();
 		this.revision = revision;
 		this.rootNode = rootNode;
