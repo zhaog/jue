@@ -23,7 +23,7 @@ public class FileHeader implements ADrop {
 	/**
 	 * 文件尾的位置
 	 */
-	private long fileTail;
+	private long fileTail = -1;
 	
 	/**
 	 * key的B+树的最小关键字数
@@ -47,6 +47,14 @@ public class FileHeader implements ADrop {
 
 	public FileHeader() {
 		super();
+	}
+
+	public FileHeader(int keyTreeMin, int valueRevTreeMin, byte valueCompressed, byte compressionCodec) {
+		super();
+		this.keyTreeMin = keyTreeMin;
+		this.valueRevTreeMin = valueRevTreeMin;
+		this.valueCompressed = valueCompressed;
+		this.compressionCodec = compressionCodec;
 	}
 
 	public long getFileTail() {

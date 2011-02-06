@@ -77,6 +77,10 @@ public class BNode<K extends Comparable<K>, V extends Serializable> implements C
 		return childNodes;
 	}
 	
+	public void setChildNodes(BNode<K, V>[] childNodes) {
+		this.childNodes = childNodes;
+	}
+
 	public boolean isLeaf() {
 		return leaf;
 	}
@@ -85,6 +89,10 @@ public class BNode<K extends Comparable<K>, V extends Serializable> implements C
 		return this.count == max;
 	}
 	
+	public void setCount(int count) {
+		this.count = count;
+	}
+
 	public boolean isNotEnough() {
 		return this.count < this.min;
 	}
@@ -99,6 +107,10 @@ public class BNode<K extends Comparable<K>, V extends Serializable> implements C
 
 	public InnerNode[] getInnerNodes() {
 		return Arrays.copyOf(innerNodes, this.count);
+	}
+
+	public void setInnerNodes(InnerNode[] innerNodes) {
+		this.innerNodes = innerNodes;
 	}
 
 	/**
