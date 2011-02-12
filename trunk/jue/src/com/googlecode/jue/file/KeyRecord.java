@@ -16,6 +16,11 @@ public class KeyRecord implements ADrop {
 	private static final long serialVersionUID = -1481819593702669747L;
 
 	/**
+	 * Key的最大长度64KB
+	 */
+	public static final int MAX_KEY_LENGTH = 1 << 16;
+	
+	/**
 	 * 标志符，可以标志是否已删除或其他状态
 	 */
 	private byte flag;
