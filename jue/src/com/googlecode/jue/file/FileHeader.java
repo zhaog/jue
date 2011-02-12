@@ -18,7 +18,7 @@ public class FileHeader implements ADrop {
 	/**
 	 * FileHeader的长度，18个字节
 	 */
-	public static final int HEADER_LENGHT = 18;
+	public static final int HEADER_LENGHT = 22;
 	
 	/**
 	 * 文件尾的位置
@@ -44,17 +44,23 @@ public class FileHeader implements ADrop {
 	 * 采用的压缩编码
 	 */
 	private byte compressionCodec;
+	
+	/**
+	 * 块大小
+	 */
+	private int blockSize;
 
 	public FileHeader() {
 		super();
 	}
 
-	public FileHeader(int keyTreeMin, int valueRevTreeMin, byte valueCompressed, byte compressionCodec) {
+	public FileHeader(int keyTreeMin, int valueRevTreeMin, byte valueCompressed, byte compressionCodec, int blockSize) {
 		super();
 		this.keyTreeMin = keyTreeMin;
 		this.valueRevTreeMin = valueRevTreeMin;
 		this.valueCompressed = valueCompressed;
 		this.compressionCodec = compressionCodec;
+		this.blockSize = blockSize;
 	}
 
 	public long getFileTail() {
@@ -97,14 +103,23 @@ public class FileHeader implements ADrop {
 		this.compressionCodec = compressionCodec;
 	}
 
+	public int getBlockSize() {
+		return blockSize;
+	}
+
+	public void setBlockSize(int blockSize) {
+		this.blockSize = blockSize;
+	}
+
 	@Override
 	public String toString() {
 		return "FileHeader [fileTail=" + fileTail + ", keyTreeMin="
-				+ keyTreeMin + ", valueRevTreeMin="
-				+ valueRevTreeMin
+				+ keyTreeMin + ", valueRevTreeMin=" + valueRevTreeMin
 				+ ", valueCompressed=" + valueCompressed
-				+ ", compressionCodec=" + compressionCodec + "]";
+				+ ", compressionCodec=" + compressionCodec + ", blockSize="
+				+ blockSize + "]";
 	}
+
 
 	
 }

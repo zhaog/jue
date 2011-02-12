@@ -20,6 +20,32 @@ public class FileConfig {
 	 */
 	public static final int DEFAULT_TREE_MIN = 10;
 	
+	
+	/**
+	 * 不使用压缩方式
+	 */
+	public static final byte NOT_COMPRESSED = 0x0;
+	
+	/**
+	 * gzip压缩方式
+	 */
+	public static final byte GZIP = 0x1;
+	
+	/**
+	 * LZW压缩方式，速度较慢，但是压缩比很大
+	 */
+	public static final byte LZW = 0x2;
+
+	/**
+	 * zlib压缩方式
+	 */
+	public static final byte ZLIB = 0x3;
+	
+	/**
+	 * 速度很快，但是压缩比很小
+	 */
+	public static final byte QUICKLZ = 0x4;
+	
 	/**
 	 * 文件块大小
 	 */
@@ -48,7 +74,7 @@ public class FileConfig {
 	/**
 	 * 采用的压缩编码
 	 */
-	private CompressionType compressionType;
+	private byte compressionType;
 	
 	/**
 	 * 使用默认参数创建Config
@@ -110,42 +136,12 @@ public class FileConfig {
 	}
 
 
-	public CompressionType getCompressionType() {
+	public byte getCompressionType() {
 		return compressionType;
 	}
 
 
-	public void setCompressionType(CompressionType compressionType) {
+	public void setCompressionType(byte compressionType) {
 		this.compressionType = compressionType;
-	}
-
-
-	public enum CompressionType {
-		
-		/**
-		 * 不使用压缩方式
-		 */
-		NOT_COMPRESSED,
-		
-		/**
-		 * gzip压缩方式
-		 */
-		GZIP,
-		
-		/**
-		 * LZW压缩方式，速度较慢，但是压缩比很大
-		 */
-		LZW,
-
-		/**
-		 * zlib压缩方式
-		 */
-		ZLIB,
-		
-		/**
-		 * 速度很快，但是压缩比很小
-		 */
-		QUICKLZ
-		
 	}
 }

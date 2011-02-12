@@ -44,6 +44,7 @@ public class DropTransfer {
 		buffer.putInt(header.getValueRevTreeMin());
 		buffer.put(header.getValueCompressed());
 		buffer.put(header.getCompressionCodec());
+		buffer.putInt(header.getBlockSize());
 		buffer.flip();
 		
 		return buffer;
@@ -56,7 +57,7 @@ public class DropTransfer {
 	 * @throws IOException
 	 */
 	public ByteBuffer tailToByteBuffer(FileTail tail) {
-		ByteBuffer buffer = ByteBuffer.allocate(FileHeader.HEADER_LENGHT);
+		ByteBuffer buffer = ByteBuffer.allocate(FileTail.TAIL_LENGHT);
 	    
 	    buffer.putInt(tail.getRevision());
 	    buffer.putLong(tail.getRootNode());
@@ -182,6 +183,7 @@ public class DropTransfer {
 		int valueRevTreeMin = buffer.getInt();
 		byte valueCompressed = buffer.get();
 		byte compressionCodec = buffer.get();
+		int blockSize = buffer.getInt();
 		
 		FileHeader header = new FileHeader();
 		header.setFileTail(fileTail);
@@ -189,7 +191,7 @@ public class DropTransfer {
 		header.setValueRevTreeMin(valueRevTreeMin);
 		header.setValueCompressed(valueCompressed);
 		header.setCompressionCodec(compressionCodec);
-		
+		header.setBlockSize(blockSize);
 		return header;
 	}
 

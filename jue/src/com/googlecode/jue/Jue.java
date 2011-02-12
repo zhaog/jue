@@ -5,8 +5,10 @@ package com.googlecode.jue;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
@@ -27,6 +29,7 @@ import com.googlecode.jue.file.FileTail;
 import com.googlecode.jue.file.KeyNode;
 import com.googlecode.jue.file.KeyRecord;
 import com.googlecode.jue.file.ValueRecord;
+import com.googlecode.jue.file.ValueRevNode;
 import com.googlecode.jue.util.ByteDynamicArray;
 import com.googlecode.jue.util.ConcurrentLRUCache;
 import com.googlecode.jue.util.DocUtils;
@@ -93,14 +96,12 @@ public class Jue {
 	public Jue(String filePath, FileConfig config) {
 		File file = new File(filePath);
 		boolean exist = file.exists();
-		blockFileChannel = new BlockFileChannel(file, config.getBlockSize(), config.isBlockCache(), new CRC32ChecksumGenerator());
-		dropTransfer = new DropTransfer(blockFileChannel);
 		try {
 			int keyTreeMin = 0;
 			if (!exist) {
-				fileHeader = createEmptyFile(config);
+				fileHeader = createEmptyFile(file, config);
 			} else {
-				fileHeader = dropTransfer.readHeader();
+				fileHeader = readHeader(file, config);
 			}
 			long tailPos = fileHeader.getFileTail();
 			long rootNodePos = -1;
@@ -113,6 +114,44 @@ public class Jue {
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}		
+	}
+
+	/**
+	 * 直接从文件中读取文件头信息
+	 * @param file
+	 * @param config 
+	 * @return
+	 * @throws IOException
+	 */
+	private FileHeader readHeader(File file, FileConfig config) throws IOException {
+		ByteBuffer buffer = ByteBuffer.allocate(FileHeader.HEADER_LENGHT);
+		FileChannel readChannel = null;
+		try {
+			readChannel = new RandomAccessFile(file, "r").getChannel();
+			readChannel.read(buffer, 0);
+		} finally {
+			readChannel.close();
+		}
+		buffer.flip();
+		long fileTail = buffer.getLong();
+		int keyTreeMin = buffer.getInt();
+		int valueRevTreeMin = buffer.getInt();
+		byte valueCompressed = buffer.get();
+		byte compressionCodec = buffer.get();
+		int blockSize = buffer.getInt();
+		
+		FileHeader header = new FileHeader();
+		header.setFileTail(fileTail);
+		header.setKeyTreeMin(keyTreeMin);
+		header.setValueRevTreeMin(valueRevTreeMin);
+		header.setValueCompressed(valueCompressed);
+		header.setCompressionCodec(compressionCodec);
+		header.setBlockSize(blockSize);
+		
+		blockFileChannel = new BlockFileChannel(file, header.getBlockSize(), config.isBlockCache(), new CRC32ChecksumGenerator());
+		dropTransfer = new DropTransfer(blockFileChannel);
+		
+		return header;
 	}
 
 	/**
@@ -172,25 +211,28 @@ public class Jue {
 			}
 			node.setChildNodes(childNodes);
 		}
-		
 		return node;
 	}
 
 	/**
 	 * 创建文件，并添加文件头
+	 * @param file 
 	 * @param config
 	 * @return 
 	 * @throws IOException 
 	 */
-	private FileHeader createEmptyFile(FileConfig config) throws IOException {
+	private FileHeader createEmptyFile(File file, FileConfig config) throws IOException {
+		blockFileChannel = new BlockFileChannel(file, config.getBlockSize(), config.isBlockCache(), new CRC32ChecksumGenerator());
+		dropTransfer = new DropTransfer(blockFileChannel);
+		
 		FileHeader header = new FileHeader();
-		header.setFileTail(0x0);
+		header.setFileTail(-1);
 		header.setKeyTreeMin(config.getKeyTreeMin());
 		byte valueCompressed = ADrop.FALSE_BYTE;
-		byte compressionCodec = (byte) FileConfig.CompressionType.NOT_COMPRESSED.ordinal();
+		byte compressionCodec = FileConfig.NOT_COMPRESSED;
 		if (config.isValueCompressed()) {
 			valueCompressed = ADrop.TRUE_BYTE;
-			compressionCodec = (byte) config.getCompressionType().ordinal();
+			compressionCodec = (byte) config.getCompressionType();
 		}
 		header.setValueCompressed(valueCompressed);
 		header.setCompressionCodec(compressionCodec);
@@ -280,7 +322,9 @@ public class Jue {
 			blockFileChannel.write(writeBuffer, writePos);
 			// 更新文件头
 			final FileHeader oldHeader = fileHeader;
-			FileHeader newHeader = new FileHeader(oldHeader.getKeyTreeMin(), oldHeader.getValueRevTreeMin(), oldHeader.getValueCompressed(), oldHeader.getCompressionCodec());
+			FileHeader newHeader = new FileHeader(oldHeader.getKeyTreeMin(), oldHeader.getValueRevTreeMin(), 
+													oldHeader.getValueCompressed(), oldHeader.getCompressionCodec(), 
+													oldHeader.getBlockSize());
 			newHeader.setFileTail(tailAddr);
 			ByteBuffer headerBuffer = dropTransfer.headerToByteBuffer(newHeader);
 			blockFileChannel.write(headerBuffer, 0);
@@ -290,17 +334,73 @@ public class Jue {
 			// 清除缓存
 			cache.remove(key);
 			return rev;
-		} catch (IOException e) {
+		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
 		
 	}
 
-	private BPlusTree<Integer, Long> getRevTree(String key) {
-		// TODO Auto-generated method stub
-		return null;
+	/**
+	 * 获取Value版本树
+	 * @param key
+	 * @return
+	 * @throws ChecksumException 
+	 * @throws IOException 
+	 */
+	private BPlusTree<Integer, Long> getRevTree(String key) throws IOException, ChecksumException {
+		KeyRecord record = getKeyRecord(key);
+		if (record != null) {
+			long revRootNodePos = record.getRevRootNode();
+			BPlusTree<Integer, Long> revTree = new BPlusTree<Integer, Long>(fileHeader.getValueRevTreeMin());
+			BNode<Integer, Long> rootNode = createValueRevNode(revRootNodePos, fileHeader.getValueRevTreeMin());
+			revTree.updateNewTree(revTree, rootNode);
+			return revTree;
+		}
+		// 不存在该版本树
+		return new BPlusTree<Integer, Long>(fileHeader.getValueRevTreeMin());
 	}
 
+	/**
+	 * 读取文件，创建节点以及遍历创建子节点
+	 * @param nodePos
+	 * @return
+	 * @throws ChecksumException 
+	 * @throws IOException 
+	 */
+	@SuppressWarnings("unchecked")
+	private BNode<Integer, Long> createValueRevNode(long nodePos, int revTreeMin) throws IOException, ChecksumException {
+		ValueRevNode valueRevNode = dropTransfer.readValueRevNode(nodePos);
+		boolean isLeaf = valueRevNode.getLeaf() == ValueRevNode.TRUE_BYTE;
+		BNode<Integer, Long> node = new BNode<Integer, Long>(null, revTreeMin, isLeaf);
+		node.setPosition(nodePos);
+		int[] revisions = valueRevNode.getRevisions();
+		node.setCount(revisions.length);
+		
+		if (isLeaf) {
+			// 初始化内部节点
+			BNode<Integer , Long>.InnerNode[] innerNodes = (InnerNode[]) Array.newInstance(InnerNode.class, revisions.length);
+			long[] keyPostions = valueRevNode.getChildOrKeyAddr();
+			for (int i = 0; i < revisions.length; ++i) {
+				innerNodes[i] = node.new InnerNode(revisions[i], keyPostions[i]);
+			}
+			node.setInnerNodes(innerNodes);
+		} else {
+			// 初始化内部节点和子节点
+			BNode<Integer , Long>.InnerNode[] innerNodes = (InnerNode[]) Array.newInstance(InnerNode.class, revisions.length);
+			for (int i = 0; i < revisions.length; ++i) {
+				innerNodes[i] = node.new InnerNode(revisions[i], null);
+			}
+			node.setInnerNodes(innerNodes);
+			
+			long[] childPostions = valueRevNode.getChildOrKeyAddr();
+			BNode<Integer , Long>[] childNodes = (BNode<Integer , Long>[])Array.newInstance(BNode.class, childPostions.length);
+			for (int i = 0; i < childPostions.length; ++i) {
+				childNodes[i] = createValueRevNode(childPostions[i], revTreeMin);
+			}
+			node.setChildNodes(childNodes);
+		}
+		return node;
+	}
 	/**
 	 * 获取key对应的当前版本号，如果该key不存在，则返回-1
 	 * @param key
@@ -315,15 +415,29 @@ public class Jue {
 			return cacheObj.currentRev;
 		}
 		// 缓存不存在，从索引中获取key信息
-		Long recordAddr = keyTree.get(key);
-		if (recordAddr != null) {
-			KeyRecord record = dropTransfer.readKeyRecord(recordAddr.longValue());
+		KeyRecord record = getKeyRecord(key);
+		if (record != null) {
 			return record.getRevision();
 		}
 		// 该key不存在，返回-1
 		return -1;
 	}
 	
+	/**
+	 * 获取KeyRecord
+	 * @param key
+	 * @return
+	 * @throws ChecksumException 
+	 * @throws IOException 
+	 */
+	private KeyRecord getKeyRecord(String key) throws IOException, ChecksumException {
+		Long recordAddr = keyTree.get(key);
+		if (recordAddr != null) {
+			KeyRecord record = dropTransfer.readKeyRecord(recordAddr.longValue());
+			return record;
+		}
+		return null;
+	}
 	/**
 	 * 缓存对象
 	 * @author noah
