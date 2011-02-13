@@ -3,6 +3,8 @@
  */
 package com.googlecode.jue.file;
 
+import java.util.Arrays;
+
 /**
  * Key的信息
  * @author noah
@@ -72,6 +74,13 @@ public class KeyRecord implements ADrop {
 
 	public long getLastestValue() {
 		return lastestValue;
+	}
+
+	@Override
+	public String toString() {
+		return "KeyRecord [flag=" + flag + ", key=" + Arrays.toString(key)
+				+ ", revRootNode=" + revRootNode + ", revision=" + revision
+				+ ", lastestValue=" + lastestValue + "]";
 	}
 	
 	

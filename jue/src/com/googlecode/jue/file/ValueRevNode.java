@@ -3,6 +3,8 @@
  */
 package com.googlecode.jue.file;
 
+import java.util.Arrays;
+
 /**
  * Value值的版本树节点
  * @author noah
@@ -14,16 +16,6 @@ public class ValueRevNode implements ADrop {
 	 * 
 	 */
 	private static final long serialVersionUID = -6060521308578833028L;
-
-	/**
-	 * 叶子节点
-	 */
-	public static final byte LEAF = 0x1;
-	
-	/**
-	 * 非叶节点
-	 */
-	public static final byte NOTLEAF = 0x0;
 	
 	/**
 	 * 是否是叶子节点
@@ -38,13 +30,13 @@ public class ValueRevNode implements ADrop {
 	/**
 	 * 子节点或者键的地址
 	 */
-	private long[] childOrKeyAddr;
+	private long[] childOrKeyPos;
 
-	public ValueRevNode(byte leaf, int[] revisions, long[] childOrKeyAddr) {
+	public ValueRevNode(byte leaf, int[] revisions, long[] childOrKeyPos) {
 		super();
 		this.leaf = leaf;
 		this.revisions = revisions;
-		this.childOrKeyAddr = childOrKeyAddr;
+		this.childOrKeyPos = childOrKeyPos;
 	}
 
 	public byte getLeaf() {
@@ -56,8 +48,15 @@ public class ValueRevNode implements ADrop {
 		return revisions;
 	}
 
-	public long[] getChildOrKeyAddr() {
-		return childOrKeyAddr;
+	public long[] getChildOrKeyPos() {
+		return childOrKeyPos;
+	}
+
+	@Override
+	public String toString() {
+		return "ValueRevNode [leaf=" + leaf + ", revisions="
+				+ Arrays.toString(revisions) + ", childOrKeyPos="
+				+ Arrays.toString(childOrKeyPos) + "]";
 	}
 	
 	

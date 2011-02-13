@@ -3,6 +3,8 @@
  */
 package com.googlecode.jue.test;
 
+import java.io.IOException;
+
 import com.googlecode.jue.compression.DataCompress;
 import com.googlecode.jue.compression.gzip.GZipDataCompress;
 import com.googlecode.jue.compression.lzw.LZWDataCompress;
@@ -48,8 +50,6 @@ public class CompressTest {
 		
 //		System.out.println("data:" + s);
 		System.out.println("size:" + data.length);
-		
-		
 		
 		LZWDataCompress lzw = new LZWDataCompress();
 		doCompress(lzw, data);

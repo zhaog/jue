@@ -3,6 +3,8 @@
  */
 package com.googlecode.jue.file;
 
+import java.util.Arrays;
+
 /**
  * Valu的记录信息
  * @author noah
@@ -47,6 +49,12 @@ public class ValueRecord implements ADrop {
 
 	public int getRevision() {
 		return revision;
+	}
+
+	@Override
+	public String toString() {
+		return "ValueRecord [flag=" + flag + ", value="
+				+ Arrays.toString(value) + ", revision=" + revision + "]";
 	}
 	
 	
