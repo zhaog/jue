@@ -16,9 +16,9 @@ public class FileTail implements ADrop {
 	private static final long serialVersionUID = 5378605477255397823L;
 	
 	/**
-	 * FileTail的长度，20个字节
+	 * FileTail的长度，24个字节
 	 */
-	public static final int TAIL_LENGHT = 24;
+	public static final int TAIL_LENGHT = 28;
 	
 	/**
 	 * 文件版本号
@@ -43,13 +43,13 @@ public class FileTail implements ADrop {
     /**
      * K-V 对的数量
      */
-    private int entryCount;
+    private long entryCount;
 
 	public FileTail() {
 		super();
 	}
 
-	public FileTail(int revision, long rootNode, int avgKeyLen, int avgValueLen, int entryCount) {
+	public FileTail(int revision, long rootNode, int avgKeyLen, int avgValueLen, long entryCount) {
 		super();
 		this.revision = revision;
 		this.rootNode = rootNode;
@@ -90,12 +90,19 @@ public class FileTail implements ADrop {
 		this.avgValueLen = avgValueLen;
 	}
 
-	public int getEntryCount() {
+	public long getEntryCount() {
 		return entryCount;
 	}
 
-	public void setEntryCount(int entryCount) {
+	public void setEntryCount(long entryCount) {
 		this.entryCount = entryCount;
+	}
+
+	@Override
+	public String toString() {
+		return "FileTail [revision=" + revision + ", rootNode=" + rootNode
+				+ ", avgKeyLen=" + avgKeyLen + ", avgValueLen=" + avgValueLen
+				+ ", entryCount=" + entryCount + "]";
 	}
     
     

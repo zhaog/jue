@@ -114,8 +114,8 @@ public class RevTreeCallBack implements TreeCallBack<Integer, Long> {
 		if (isLeaf) {
 			for (int i = 0; i < innerNodes.length; ++i) {
 				BNode<Integer, Long>.InnerNode innerNode = innerNodes[i];
-				long recordAddr = innerNode.getValue();
-				array.add(ByteUtil.long2byte(recordAddr));
+				long recordPos = innerNode.getValue();
+				array.add(ByteUtil.long2byte(recordPos));
 			}
 		} else {
 			BNode<Integer, Long>[] childNodes = bNode.getChildNodes();

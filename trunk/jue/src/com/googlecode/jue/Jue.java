@@ -189,7 +189,7 @@ public class Jue {
 		if (isLeaf) {
 			// 初始化内部节点
 			BNode<String , Long>.InnerNode[] innerNodes = (InnerNode[]) Array.newInstance(InnerNode.class, keys.length);
-			long[] keyPostions = keyNode.getChildOrKeyAddr();
+			long[] keyPostions = keyNode.getChildOrKeyPos();
 			for (int i = 0; i < keys.length; ++i) {
 				String key = new String(keys[i], JueConstant.CHARSET);
 				innerNodes[i] = node.new InnerNode(key, keyPostions[i]);
@@ -204,7 +204,7 @@ public class Jue {
 			}
 			node.setInnerNodes(innerNodes);
 			
-			long[] childPostions = keyNode.getChildOrKeyAddr();
+			long[] childPostions = keyNode.getChildOrKeyPos();
 			BNode<String , Long>[] childNodes = (BNode<String , Long>[])Array.newInstance(BNode.class, childPostions.length);
 			for (int i = 0; i < childPostions.length; ++i) {
 				childNodes[i] = createKeyBNode(childPostions[i], keyTreeMin);
@@ -285,6 +285,8 @@ public class Jue {
 			// 添加ValueRecord
 			ValueRecord valueRecord = DocUtils.docObjToValueRecord(false, docObj, rev);
 			ByteBuffer vRecBuffer = dropTransfer.valueRecordToByteBuffer(valueRecord);
+			// ValueRec的写入位置
+			long valuePos = writePos;
 			byteArray.add(vRecBuffer.array());
 			// 添加版本树的修改
 			BPlusTree<Integer, Long> revTree = getRevTree(key);
@@ -292,29 +294,29 @@ public class Jue {
 			revTree.put(rev, writePos, revTreeCallBack);
 			byteArray.add(revTreeCallBack.getBytes());
 			// 添加KeyRecord
-			long rootNodeAddr = revTree.getRootNode().getPosition();
-			long lastestValueAddr = revTree.getLastLeafNode().getPosition();
-			KeyRecord keyRecord = DocUtils.createKeyRecord(false, key, rev, rootNodeAddr, lastestValueAddr);
+			long rootNodePos = revTree.getRootNode().getPosition();
+			long lastestValuePos = valuePos;
+			KeyRecord keyRecord = DocUtils.createKeyRecord(false, key, rev, rootNodePos, lastestValuePos);
 			ByteBuffer kRecBuffer = dropTransfer.keyRecordToByteBuffer(keyRecord);
 			// 该KeyRecord的存储地址
-			long keyRecordAddr = writePos + byteArray.size();
+			long keyRecordPos = writePos + byteArray.size();
 			byteArray.add(kRecBuffer.array());
 			// 添加Key的树修改
 			KeyTreeCallBack keyTreeCallBack = new KeyTreeCallBack(writePos + byteArray.size());
-			keyTree.put(key, keyRecordAddr, keyTreeCallBack);
+			keyTree.put(key, keyRecordPos, keyTreeCallBack);
 			byteArray.add(keyTreeCallBack.getBytes());
 			// 添加文件尾
 			FileTail oldFileTail = fileTail;
 			if (oldFileTail == null) {
 				oldFileTail = new FileTail(0, 0, 0, 0, 0);
 			}
-			int newEntryCount = oldFileTail.getEntryCount() + 1;
-			int newAvgKeyLen = (oldFileTail.getAvgKeyLen() * oldFileTail.getEntryCount() + keyRecord.getKey().length) / newEntryCount;
-			int newAvgValueLen = (oldFileTail.getAvgValueLen() * oldFileTail.getEntryCount() + valueRecord.getValue().length) / newEntryCount;
+			long newEntryCount = oldFileTail.getEntryCount() + 1;
+			int newAvgKeyLen = (int) ((oldFileTail.getAvgKeyLen() * oldFileTail.getEntryCount() + keyRecord.getKey().length) / newEntryCount);
+			int newAvgValueLen = (int) ((oldFileTail.getAvgValueLen() * oldFileTail.getEntryCount() + valueRecord.getValue().length) / newEntryCount);
 			FileTail tail = new FileTail(oldFileTail.getRevision() + 1, keyTree.getRootNode().getPosition(), newAvgKeyLen, newAvgValueLen, newEntryCount);
 			ByteBuffer tailBuffer = dropTransfer.tailToByteBuffer(tail);
 			// 文件尾的地址
-			long tailAddr = writePos + byteArray.size();
+			long tailPos = writePos + byteArray.size();
 			byteArray.add(tailBuffer.array());
 			// 写入文件
 			ByteBuffer writeBuffer = ByteBuffer.allocate(byteArray.size());
@@ -326,7 +328,7 @@ public class Jue {
 			FileHeader newHeader = new FileHeader(oldHeader.getKeyTreeMin(), oldHeader.getValueRevTreeMin(), 
 													oldHeader.getValueCompressed(), oldHeader.getCompressionCodec(), 
 													oldHeader.getBlockSize());
-			newHeader.setFileTail(tailAddr);
+			newHeader.setFileTail(tailPos);
 			ByteBuffer headerBuffer = dropTransfer.headerToByteBuffer(newHeader);
 			blockFileChannel.write(headerBuffer, 0);
 			// 更新文件头和文件尾
@@ -380,7 +382,7 @@ public class Jue {
 		if (isLeaf) {
 			// 初始化内部节点
 			BNode<Integer , Long>.InnerNode[] innerNodes = (InnerNode[]) Array.newInstance(InnerNode.class, revisions.length);
-			long[] keyPostions = valueRevNode.getChildOrKeyAddr();
+			long[] keyPostions = valueRevNode.getChildOrKeyPos();
 			for (int i = 0; i < revisions.length; ++i) {
 				innerNodes[i] = node.new InnerNode(revisions[i], keyPostions[i]);
 			}
@@ -393,7 +395,7 @@ public class Jue {
 			}
 			node.setInnerNodes(innerNodes);
 			
-			long[] childPostions = valueRevNode.getChildOrKeyAddr();
+			long[] childPostions = valueRevNode.getChildOrKeyPos();
 			BNode<Integer , Long>[] childNodes = (BNode<Integer , Long>[])Array.newInstance(BNode.class, childPostions.length);
 			for (int i = 0; i < childPostions.length; ++i) {
 				childNodes[i] = createValueRevNode(childPostions[i], revTreeMin);

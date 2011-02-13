@@ -3,6 +3,11 @@
  */
 package com.googlecode.jue.file;
 
+import java.io.UnsupportedEncodingException;
+import java.util.Arrays;
+
+import com.googlecode.jue.JueConstant;
+
 /**
  * Key的B+树的节点
  * @author noah
@@ -27,13 +32,13 @@ public class KeyNode implements ADrop {
 	/**
 	 * 子节点或者键的地址
 	 */
-	private long[] childOrKeyAddr;
+	private long[] childOrKeyPos;
 
-	public KeyNode(byte leaf, byte[][] keys, long[] childOrKeyAddr) {
+	public KeyNode(byte leaf, byte[][] keys, long[] childOrKeyPos) {
 		super();
 		this.leaf = leaf;
 		this.keys = keys;
-		this.childOrKeyAddr = childOrKeyAddr;
+		this.childOrKeyPos = childOrKeyPos;
 	}
 
 	public byte getLeaf() {
@@ -44,8 +49,24 @@ public class KeyNode implements ADrop {
 		return keys;
 	}
 
-	public long[] getChildOrKeyAddr() {
-		return childOrKeyAddr;
+	public long[] getChildOrKeyPos() {
+		return childOrKeyPos;
+	}
+
+	@Override
+	public String toString() {
+		StringBuilder s = new StringBuilder();
+		s.append("[");
+		try {
+			for (int i = 0; i < keys.length; ++i) {
+				s.append(new String(keys[i], JueConstant.CHARSET));
+				s.append(",");
+			}
+		} catch (UnsupportedEncodingException e) {
+		}
+		s.append("]");
+		return "KeyNode [leaf=" + leaf + ", keys=" + s.toString()
+				+ ", childOrKeyPos=" + Arrays.toString(childOrKeyPos) + "]";
 	}
 
 	

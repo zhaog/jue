@@ -63,7 +63,7 @@ public class DropTransfer {
 	    buffer.putLong(tail.getRootNode());
 	    buffer.putInt(tail.getAvgKeyLen());
 	    buffer.putInt(tail.getAvgValueLen());
-	    buffer.putInt(tail.getEntryCount());
+	    buffer.putLong(tail.getEntryCount());
 	    buffer.flip();
 	
 		return buffer;
@@ -89,7 +89,7 @@ public class DropTransfer {
 			array.add(key);
 		}
 		// 添加子树或者键记录的地址
-		long[] childAddr = keyNode.getChildOrKeyAddr();
+		long[] childAddr = keyNode.getChildOrKeyPos();
 		for (int i = 0; i < childAddr.length; ++i) {
 			array.add(ByteUtil.long2byte(childAddr[i]));
 		}
@@ -136,7 +136,7 @@ public class DropTransfer {
 			array.add(ByteUtil.int2byte(revisions[i]));
 		}
 		// 添加子树地址
-		long[] childAddr = valueRevNode.getChildOrKeyAddr();
+		long[] childAddr = valueRevNode.getChildOrKeyPos();
 		for (int i = 0; i < childAddr.length; ++i) {
 			array.add(ByteUtil.long2byte(childAddr[i]));
 		}
@@ -210,7 +210,7 @@ public class DropTransfer {
 		long rootNode = buffer.getLong();
 	    int avgKeyLen = buffer.getInt();
 	    int avgValueLen = buffer.getInt();
-	    int entryCount = buffer.getInt();
+	    long entryCount = buffer.getLong();
 	    
 	    FileTail tail = new FileTail();
 	    tail.setRevision(revision);
@@ -330,7 +330,7 @@ public class DropTransfer {
 			revisions[i] = revisionsBuffer.getInt();
 		}
 		// 判断是否是叶子节点以及子树或者键记录的数量
-		int childLenght = (ValueRevNode.LEAF == leaf) ? keyCount : keyCount + 1;
+		int childLenght = (ValueRevNode.TRUE_BYTE == leaf) ? keyCount : keyCount + 1;
 		long[] childOrKeyAddr = new long[childLenght];
 		// 子树或者Value记录的地址
 		ByteBuffer childAddrBuffer = ByteBuffer.allocate(childLenght * 8);
