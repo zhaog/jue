@@ -237,6 +237,7 @@ public class Jue {
 		header.setValueCompressed(valueCompressed);
 		header.setCompressionCodec(compressionCodec);
 		header.setValueRevTreeMin(config.getValueRevTreeMin());
+		header.setBlockSize(config.getBlockSize());
 		ByteBuffer buffer = dropTransfer.headerToByteBuffer(header);
 		blockFileChannel.write(buffer, 0);
 		return header;
