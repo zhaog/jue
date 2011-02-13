@@ -22,7 +22,7 @@ public class ConcurrentLRUCache<K, V> {
 	/**
 	 * 默认的最大K-V数量
 	 */
-	static final int MAX_CAPACITY = 1 << 30;
+	static final int MAX_CAPACITY = 1 << 16;
 
 	/**
 	 * 默认片段数
