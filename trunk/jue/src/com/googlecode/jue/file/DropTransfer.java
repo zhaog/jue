@@ -89,9 +89,9 @@ public class DropTransfer {
 			array.add(key);
 		}
 		// 添加子树或者键记录的地址
-		long[] childAddr = keyNode.getChildOrKeyPos();
-		for (int i = 0; i < childAddr.length; ++i) {
-			array.add(ByteUtil.long2byte(childAddr[i]));
+		long[] childPos = keyNode.getChildOrKeyPos();
+		for (int i = 0; i < childPos.length; ++i) {
+			array.add(ByteUtil.long2byte(childPos[i]));
 		}
 		byte[] b = array.toByteArray();
 		ByteBuffer buffer = ByteBuffer.allocate(b.length);
@@ -136,9 +136,9 @@ public class DropTransfer {
 			array.add(ByteUtil.int2byte(revisions[i]));
 		}
 		// 添加子树地址
-		long[] childAddr = valueRevNode.getChildOrKeyPos();
-		for (int i = 0; i < childAddr.length; ++i) {
-			array.add(ByteUtil.long2byte(childAddr[i]));
+		long[] childPos = valueRevNode.getChildOrKeyPos();
+		for (int i = 0; i < childPos.length; ++i) {
+			array.add(ByteUtil.long2byte(childPos[i]));
 		}
 		byte[] b = array.toByteArray();
 		ByteBuffer buffer = ByteBuffer.allocate(b.length);
@@ -258,14 +258,15 @@ public class DropTransfer {
 		}
 		// 判断是否是叶子节点以及子树或者键记录的数量
 		int childLenght = (KeyNode.TRUE_BYTE == leaf) ? keyCount : keyCount + 1;
-		long[] childOrKeyAddr = new long[childLenght];
+		long[] childOrKeyPos = new long[childLenght];
 		// 子树或者键记录的地址
-		ByteBuffer childAddrBuffer = ByteBuffer.allocate(childLenght * 8);
-		blockChannel.read(childAddrBuffer, offset, true);
+		ByteBuffer childPosBuffer = ByteBuffer.allocate(childLenght * 8);
+		blockChannel.read(childPosBuffer, offset, true);
+		childPosBuffer.flip();
 		for (int j = 0; j < childLenght; ++j) {
-			childOrKeyAddr[j] = childAddrBuffer.getLong();
+			childOrKeyPos[j] = childPosBuffer.getLong();
 		}
-		KeyNode keyNode = new KeyNode(leaf, keys, childOrKeyAddr);
+		KeyNode keyNode = new KeyNode(leaf, keys, childOrKeyPos);
 		return keyNode;
 	}
 	
@@ -331,14 +332,14 @@ public class DropTransfer {
 		}
 		// 判断是否是叶子节点以及子树或者键记录的数量
 		int childLenght = (ValueRevNode.TRUE_BYTE == leaf) ? keyCount : keyCount + 1;
-		long[] childOrKeyAddr = new long[childLenght];
+		long[] childOrKeyPos = new long[childLenght];
 		// 子树或者Value记录的地址
-		ByteBuffer childAddrBuffer = ByteBuffer.allocate(childLenght * 8);
-		blockChannel.read(childAddrBuffer, offset, true);
+		ByteBuffer childPosBuffer = ByteBuffer.allocate(childLenght * 8);
+		blockChannel.read(childPosBuffer, offset, true);
 		for (int j = 0; j < childLenght; ++j) {
-			childOrKeyAddr[j] = childAddrBuffer.getLong();
+			childOrKeyPos[j] = childPosBuffer.getLong();
 		}
-		ValueRevNode valueRevNode = new ValueRevNode(leaf, revisions, childOrKeyAddr);
+		ValueRevNode valueRevNode = new ValueRevNode(leaf, revisions, childOrKeyPos);
 		return valueRevNode;
 	}
 	
