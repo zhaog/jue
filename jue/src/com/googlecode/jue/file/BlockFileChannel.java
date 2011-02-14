@@ -212,6 +212,8 @@ public class BlockFileChannel {
 		long[] blockIndexes = getReadBlockIndexes(position, maxSize);
 		for (int i = 0; i < blockIndexes.length; ++i) {
 			ByteBuffer blockDataBuffer = getBlockData(blockIndexes[i], checksum);
+			int oldPos = blockDataBuffer.position();
+			int oldLimit = blockDataBuffer.limit();
 			if (i == 0) {
 				// 要从数据块中读取的起始位置
 				blockDataBuffer.position((int) (position % blockSize));
@@ -229,6 +231,8 @@ public class BlockFileChannel {
 			// 更新已经读取的数据量
 			count += blockDataBuffer.remaining();
 			buffer.put(blockDataBuffer);
+			blockDataBuffer.position(oldPos);
+			blockDataBuffer.limit(oldLimit);
 
 		}
 		return count;
