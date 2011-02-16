@@ -109,8 +109,8 @@ public class BNode<K extends Comparable<K>, V extends Serializable> implements C
 		return Arrays.copyOf(innerNodes, this.count);
 	}
 
-	public void setInnerNodes(InnerNode[] innerNodes) {
-		this.innerNodes = innerNodes;
+	public void setInnerNode(int i, InnerNode innerNode) {
+		this.innerNodes[i] = innerNode;
 	}
 
 	/**

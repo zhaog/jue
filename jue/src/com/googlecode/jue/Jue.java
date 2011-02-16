@@ -16,7 +16,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 import com.googlecode.jue.bplustree.BNode;
 import com.googlecode.jue.bplustree.BPlusTree;
 import com.googlecode.jue.bplustree.CopyOnWriteBPlusTree;
-import com.googlecode.jue.bplustree.BNode.InnerNode;
 import com.googlecode.jue.doc.DocObject;
 import com.googlecode.jue.exception.RevisionInvalidException;
 import com.googlecode.jue.file.ADrop;
@@ -188,22 +187,19 @@ public class Jue {
 		
 		if (isLeaf) {
 			// 初始化内部节点
-			BNode<String , Long>.InnerNode[] innerNodes = (InnerNode[]) Array.newInstance(InnerNode.class, keys.length);
 			long[] keyPostions = keyNode.getChildOrKeyPos();
 			for (int i = 0; i < keys.length; ++i) {
 				String key = new String(keys[i], JueConstant.CHARSET);
-				innerNodes[i] = node.new InnerNode(key, keyPostions[i]);
+				BNode<String , Long>.InnerNode innerNode = node.new InnerNode(key, keyPostions[i]);
+				node.setInnerNode(i, innerNode);
 			}
-			node.setInnerNodes(innerNodes);
 		} else {
 			// 初始化内部节点和子节点
-			BNode<String , Long>.InnerNode[] innerNodes = (InnerNode[]) Array.newInstance(InnerNode.class, keys.length);
 			for (int i = 0; i < keys.length; ++i) {
 				String key = new String(keys[i], JueConstant.CHARSET);
-				innerNodes[i] = node.new InnerNode(key, null);
-			}
-			node.setInnerNodes(innerNodes);
-			
+				BNode<String , Long>.InnerNode innerNode = node.new InnerNode(key, null);
+				node.setInnerNode(i, innerNode);
+			}			
 			long[] childPostions = keyNode.getChildOrKeyPos();
 			BNode<String , Long>[] childNodes = (BNode<String , Long>[])Array.newInstance(BNode.class, childPostions.length);
 			for (int i = 0; i < childPostions.length; ++i) {
@@ -381,19 +377,17 @@ public class Jue {
 		
 		if (isLeaf) {
 			// 初始化内部节点
-			BNode<Integer , Long>.InnerNode[] innerNodes = (InnerNode[]) Array.newInstance(InnerNode.class, revisions.length);
 			long[] keyPostions = valueRevNode.getChildOrKeyPos();
 			for (int i = 0; i < revisions.length; ++i) {
-				innerNodes[i] = node.new InnerNode(revisions[i], keyPostions[i]);
+				BNode<Integer, Long>.InnerNode innerNode = node.new InnerNode(revisions[i], keyPostions[i]);
+				node.setInnerNode(i, innerNode);
 			}
-			node.setInnerNodes(innerNodes);
 		} else {
 			// 初始化内部节点和子节点
-			BNode<Integer , Long>.InnerNode[] innerNodes = (InnerNode[]) Array.newInstance(InnerNode.class, revisions.length);
 			for (int i = 0; i < revisions.length; ++i) {
-				innerNodes[i] = node.new InnerNode(revisions[i], null);
+				BNode<Integer, Long>.InnerNode innerNode = node.new InnerNode(revisions[i], null);
+				node.setInnerNode(i, innerNode);
 			}
-			node.setInnerNodes(innerNodes);
 			
 			long[] childPostions = valueRevNode.getChildOrKeyPos();
 			BNode<Integer , Long>[] childNodes = (BNode<Integer , Long>[])Array.newInstance(BNode.class, childPostions.length);
