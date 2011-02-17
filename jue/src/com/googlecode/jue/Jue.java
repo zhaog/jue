@@ -6,7 +6,6 @@ package com.googlecode.jue;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -40,6 +39,11 @@ import com.googlecode.jue.util.DocUtils;
  */
 public class Jue {
 
+	/**
+	 * 最大Key长度
+	 */
+	public static final int MAX_KEY_LENGTH = 1 << 16;
+	
 	/**
 	 * 文件锁
 	 */
@@ -176,7 +180,6 @@ public class Jue {
 	 * @throws ChecksumException 
 	 * @throws IOException 
 	 */
-	@SuppressWarnings("unchecked")
 	private BNode<String, Long> createKeyBNode(long nodePosition, int keyTreeMin) throws IOException, ChecksumException {
 		KeyNode keyNode = dropTransfer.readKeyNode(nodePosition);
 		boolean isLeaf = keyNode.getLeaf() == KeyNode.TRUE_BYTE;
@@ -201,11 +204,10 @@ public class Jue {
 				node.setInnerNode(i, innerNode);
 			}			
 			long[] childPostions = keyNode.getChildOrKeyPos();
-			BNode<String , Long>[] childNodes = (BNode<String , Long>[])Array.newInstance(BNode.class, childPostions.length);
 			for (int i = 0; i < childPostions.length; ++i) {
-				childNodes[i] = createKeyBNode(childPostions[i], keyTreeMin);
+				BNode<String , Long> childNode = createKeyBNode(childPostions[i], keyTreeMin);
+				node.setChildNode(i, childNode);
 			}
-			node.setChildNodes(childNodes);
 		}
 		return node;
 	}
@@ -246,9 +248,13 @@ public class Jue {
 	 * @param requireRev 该操作基于的版本号
 	 * @return 返回操作成功后，数据的版本号
 	 */
-	public int putOverWrite(String key, DocObject docObj, int requireRev) {
-		writeLock.lock();
+	public int putOverWrite(String key, DocObject docObj, int requireRev) {		
 		try {
+			byte[] keyBytes = key.getBytes(JueConstant.CHARSET);			
+			if (keyBytes.length > MAX_KEY_LENGTH) {
+				throw new IllegalArgumentException("key length must less than 64KB, actul:" + keyBytes.length);
+			}
+			writeLock.lock();
 			int rev = 0;
 			if (requireRev >= 0) {
 				int currentRev = getCurrentRev(key);
@@ -259,7 +265,7 @@ public class Jue {
 					rev = currentRev + 1;
 				}
 			}
-			return putImpl(key, docObj, rev);
+			return putImpl(key, keyBytes, docObj, rev);
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		} finally {
@@ -270,11 +276,12 @@ public class Jue {
 	/**
 	 * Put操作的实现方法
 	 * @param key
+	 * @param keyBytes 
 	 * @param docObj
 	 * @param rev 
 	 * @return
 	 */
-	private int putImpl(String key, DocObject docObj, int rev) {
+	private int putImpl(String key, byte[] keyBytes, DocObject docObj, int rev) {
 		try {
 			long writePos = blockFileChannel.size();
 			ByteDynamicArray byteArray = new ByteDynamicArray();
@@ -292,7 +299,7 @@ public class Jue {
 			// 添加KeyRecord
 			long rootNodePos = revTree.getRootNode().getPosition();
 			long lastestValuePos = valuePos;
-			KeyRecord keyRecord = DocUtils.createKeyRecord(false, key, rev, rootNodePos, lastestValuePos);
+			KeyRecord keyRecord = DocUtils.createKeyRecord(false, keyBytes, rev, rootNodePos, lastestValuePos);
 			ByteBuffer kRecBuffer = dropTransfer.keyRecordToByteBuffer(keyRecord);
 			// 该KeyRecord的存储地址
 			long keyRecordPos = writePos + byteArray.size();
@@ -388,13 +395,11 @@ public class Jue {
 				BNode<Integer, Long>.InnerNode innerNode = node.new InnerNode(revisions[i], null);
 				node.setInnerNode(i, innerNode);
 			}
-			
 			long[] childPostions = valueRevNode.getChildOrKeyPos();
-			BNode<Integer , Long>[] childNodes = (BNode<Integer , Long>[])Array.newInstance(BNode.class, childPostions.length);
 			for (int i = 0; i < childPostions.length; ++i) {
-				childNodes[i] = createValueRevNode(childPostions[i], revTreeMin);
+				BNode<Integer , Long> childNode = createValueRevNode(childPostions[i], revTreeMin);
+				node.setChildNode(i, childNode);
 			}
-			node.setChildNodes(childNodes);
 		}
 		return node;
 	}

@@ -39,19 +39,14 @@ public class DocUtils {
 	/**
 	 * 创建KeyRecord
 	 * @param deleted
-	 * @param key
+	 * @param keyBytes
 	 * @param rev
 	 * @param revRootNode
 	 * @param lastestValue
 	 * @return
 	 */
-	public static KeyRecord createKeyRecord(boolean deleted, String key, int rev, long revRootNode, long lastestValue) {
+	public static KeyRecord createKeyRecord(boolean deleted, byte[] keyBytes, int rev, long revRootNode, long lastestValue) {
 		byte flag = deleted ? ADrop.FALSE_BYTE : ADrop.TRUE_BYTE;
-		KeyRecord keyRecord = null;
-		try {
-			keyRecord = new KeyRecord(flag, key.getBytes(JueConstant.CHARSET), revRootNode, rev, lastestValue);
-		} catch (UnsupportedEncodingException e) {
-		}
-		return keyRecord;
+		return new KeyRecord(flag, keyBytes, revRootNode, rev, lastestValue);
 	}
 }

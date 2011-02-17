@@ -77,8 +77,8 @@ public class BNode<K extends Comparable<K>, V extends Serializable> implements C
 		return childNodes;
 	}
 	
-	public void setChildNodes(BNode<K, V>[] childNodes) {
-		this.childNodes = childNodes;
+	public void setChildNode(int i, BNode<K, V> childNode) {
+		this.childNodes[i] = childNode;
 	}
 
 	public boolean isLeaf() {
