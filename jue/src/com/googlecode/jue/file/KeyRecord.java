@@ -75,7 +75,11 @@ public class KeyRecord implements ADrop {
 	public long getLastestValue() {
 		return lastestValue;
 	}
-
+	
+	public boolean isDeleted() {
+		return flag == FALSE_BYTE;
+	}
+	
 	@Override
 	public String toString() {
 		return "KeyRecord [flag=" + flag + ", key=" + Arrays.toString(key)
