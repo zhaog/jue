@@ -50,6 +50,10 @@ public class ValueRecord implements ADrop {
 	public int getRevision() {
 		return revision;
 	}
+	
+	public boolean isDeleted() {
+		return flag == FALSE_BYTE;
+	}
 
 	@Override
 	public String toString() {

@@ -373,7 +373,6 @@ public class Jue {
 	 * @throws ChecksumException 
 	 * @throws IOException 
 	 */
-	@SuppressWarnings("unchecked")
 	private BNode<Integer, Long> createValueRevNode(long nodePos, int revTreeMin) throws IOException, ChecksumException {
 		ValueRevNode valueRevNode = dropTransfer.readValueRevNode(nodePos);
 		boolean isLeaf = valueRevNode.getLeaf() == ValueRevNode.TRUE_BYTE;
@@ -440,6 +439,68 @@ public class Jue {
 		}
 		return null;
 	}
+	
+	public DocObject get(String key, int requireRev) {
+		CacheObject cacheObj = cache.get(key);
+		// 缓存中存在
+		if (cacheObj != null) {
+			if (requireRev >= 0) {
+				if (cacheObj.currentRev == requireRev) {// 版本符合
+					return cacheObj.docObj;
+				}
+			}
+		}
+		// 从文件中读取
+		try {
+			KeyRecord keyRecord = getKeyRecord(key);
+			if (keyRecord == null) {
+				return null;
+			}
+			// value记录的地址
+			long valueRecordPos = 0;
+			// 是否是最新版本的数据
+			boolean isLastValue = false;
+			int lastRevision = -1;
+			if (requireRev >= 0) {
+				int currentRevision = keyRecord.getRevision();
+				if (currentRevision == requireRev) {// 版本为最新数据，读取最新的数据
+					valueRecordPos = keyRecord.getLastestValue();
+					isLastValue = true;
+					lastRevision = currentRevision;
+				} else {// 查找其他版本数据
+					if (requireRev > currentRevision) {// 版本超过最新版本，数据不存在
+						return null;
+					}
+					BPlusTree<Integer, Long> revTree = getRevTree(key);
+					Long valuePos = revTree.get(requireRev);
+					if (valuePos == null) {// 该版本数据可能已经被删除
+						return null;
+					}
+					valueRecordPos = valuePos.longValue();
+				}
+			} else {
+				valueRecordPos = keyRecord.getLastestValue();
+				isLastValue = true;
+				lastRevision = keyRecord.getRevision();
+			}
+			// 从文件读取ValueRecord
+			ValueRecord valueRecord = dropTransfer.readValueRecord(valueRecordPos);
+			DocObject docObj = null;
+			if (!valueRecord.isDeleted()) {// 数据存在
+				byte[] values = valueRecord.getValue();
+				String valueStr = new String(values, JueConstant.CHARSET);
+				docObj = new DocObject(valueStr);
+			}
+			if (isLastValue) {// 最新版本的数据
+				cacheObj = new CacheObject(lastRevision, docObj);
+				cache.put(key, cacheObj);
+			}
+			return docObj;
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+	}
+	
 	/**
 	 * 缓存对象
 	 * @author noah
@@ -455,5 +516,13 @@ public class Jue {
 		 * 文档对象
 		 */
 		DocObject docObj;
+
+		public CacheObject(int currentRev, DocObject docObj) {
+			super();
+			this.currentRev = currentRev;
+			this.docObj = docObj;
+		}
+		
+		
 	}
 }
