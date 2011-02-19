@@ -265,7 +265,7 @@ public class Jue {
 					rev = currentRev + 1;
 				}
 			}
-			return putImpl(key, keyBytes, docObj, rev);
+			return putImpl(key, keyBytes, docObj, false, rev);
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		} finally {
@@ -281,12 +281,12 @@ public class Jue {
 	 * @param rev 
 	 * @return
 	 */
-	private int putImpl(String key, byte[] keyBytes, DocObject docObj, int rev) {
+	private int putImpl(String key, byte[] keyBytes, DocObject docObj, boolean deleted, int rev) {
 		try {
 			long writePos = blockFileChannel.size();
 			ByteDynamicArray byteArray = new ByteDynamicArray();
 			// 添加ValueRecord
-			ValueRecord valueRecord = DocUtils.docObjToValueRecord(false, docObj, rev);
+			ValueRecord valueRecord = DocUtils.docObjToValueRecord(deleted, docObj, rev);
 			ByteBuffer vRecBuffer = dropTransfer.valueRecordToByteBuffer(valueRecord);
 			// ValueRec的写入位置
 			long valuePos = writePos;
@@ -299,7 +299,7 @@ public class Jue {
 			// 添加KeyRecord
 			long rootNodePos = revTree.getRootNode().getPosition();
 			long lastestValuePos = valuePos;
-			KeyRecord keyRecord = DocUtils.createKeyRecord(false, keyBytes, rev, rootNodePos, lastestValuePos);
+			KeyRecord keyRecord = DocUtils.createKeyRecord(deleted, keyBytes, rev, rootNodePos, lastestValuePos);
 			ByteBuffer kRecBuffer = dropTransfer.keyRecordToByteBuffer(keyRecord);
 			// 该KeyRecord的存储地址
 			long keyRecordPos = writePos + byteArray.size();
@@ -440,6 +440,12 @@ public class Jue {
 		return null;
 	}
 	
+	/**
+	 * 获取文档对象
+	 * @param key
+	 * @param requireRev
+	 * @return
+	 */
 	public DocObject get(String key, int requireRev) {
 		CacheObject cacheObj = cache.get(key);
 		// 缓存中存在
@@ -500,6 +506,28 @@ public class Jue {
 			throw new RuntimeException(e);
 		}
 	}
+	
+	/**
+	 * 删除key对应文档对象
+	 * @param key
+	 * @return
+	 */
+	public int remove(String key) {
+		try {
+			byte[] keyBytes = key.getBytes(JueConstant.CHARSET);			
+			if (keyBytes.length > MAX_KEY_LENGTH) {
+				throw new IllegalArgumentException("key length must less than 64KB, actul:" + keyBytes.length);
+			}
+			writeLock.lock();
+			int currentRev = getCurrentRev(key);
+			return putImpl(key, keyBytes, null, true, currentRev + 1);
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		} finally {
+			writeLock.unlock();
+		}		
+	}
+	
 	
 	/**
 	 * 缓存对象
