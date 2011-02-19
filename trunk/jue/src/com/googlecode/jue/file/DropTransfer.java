@@ -96,6 +96,7 @@ public class DropTransfer {
 		byte[] b = array.toByteArray();
 		ByteBuffer buffer = ByteBuffer.allocate(b.length);
 		buffer.put(b);
+		buffer.flip();
 		return buffer;
 	}
 	
@@ -117,6 +118,7 @@ public class DropTransfer {
 		byte[] b = array.toByteArray();
 		ByteBuffer buffer = ByteBuffer.allocate(b.length);
 		buffer.put(b);
+		buffer.flip();
 		return buffer;
 	}
 	
@@ -143,6 +145,7 @@ public class DropTransfer {
 		byte[] b = array.toByteArray();
 		ByteBuffer buffer = ByteBuffer.allocate(b.length);
 		buffer.put(b);
+		buffer.flip();
 		return buffer;
 	}
 	
@@ -158,13 +161,16 @@ public class DropTransfer {
 		byte[] value = valueRecord.getValue();
 		// Value的长度
 		array.add(ByteUtil.int2byte(value.length));
-		// 加入Value
-		array.add(value);
+		if (value.length != 0) {// 如果未空值，不插入value
+			// 加入Value
+			array.add(value);
+		}
 		// Value的版本
 		array.add(ByteUtil.int2byte(valueRecord.getRevision()));		
 		byte[] b = array.toByteArray();
 		ByteBuffer buffer = ByteBuffer.allocate(b.length);
 		buffer.put(b);
+		buffer.flip();
 		return buffer;
 	}
 	
@@ -367,7 +373,9 @@ public class DropTransfer {
 		blockChannel.read(buf, offset, true);
 		buf.flip();
 		byte[] value = new byte[valueLength];
-		buf.get(value);
+		if (valueLength != 0) {// 数据不为空，或者未被删除，
+			buf.get(value);
+		}
 		int revision = buf.getInt();
 		ValueRecord keyRecord = new ValueRecord(flag, value, revision);
 		return keyRecord;

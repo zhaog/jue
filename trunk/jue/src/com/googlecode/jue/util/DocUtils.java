@@ -27,10 +27,16 @@ public class DocUtils {
 	 */
 	public static ValueRecord docObjToValueRecord(boolean deleted, DocObject docObj, int rev) {
 		byte flag = deleted ? ADrop.FALSE_BYTE : ADrop.TRUE_BYTE;
-		String json = docObj.toString();
+		byte[] docBytes = null;
 		ValueRecord valueRecord = null;
 		try {
-			valueRecord = new ValueRecord(flag, json.getBytes(JueConstant.CHARSET), rev);
+			if (docObj != null) {
+				String json = docObj.toString();
+				docBytes = json.getBytes(JueConstant.CHARSET);
+			} else {
+				docBytes = new byte[0];
+			}		
+			valueRecord = new ValueRecord(flag, docBytes, rev);
 		} catch (UnsupportedEncodingException e) {
 		}
 		return valueRecord;
