@@ -20,7 +20,9 @@ public class JueTest {
 //		DocObject docObj = new DocObject();
 //		docObj.put("key", true);
 //		jue.putOverWrite("test", docObj, -1);
-		DocObject obj = jue.get("test", -1);
+		DocObject obj = jue.get("test", 1);
+//		int rev = jue.remove("test");
+//		System.out.println(rev);
 	}
 
 }
