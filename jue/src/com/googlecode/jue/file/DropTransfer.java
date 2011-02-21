@@ -342,6 +342,7 @@ public class DropTransfer {
 		// 子树或者Value记录的地址
 		ByteBuffer childPosBuffer = ByteBuffer.allocate(childLenght * 8);
 		blockChannel.read(childPosBuffer, offset, true);
+		childPosBuffer.flip();
 		for (int j = 0; j < childLenght; ++j) {
 			childOrKeyPos[j] = childPosBuffer.getLong();
 		}

@@ -489,17 +489,16 @@ public class Jue {
 				isLastValue = true;
 				lastRevision = keyRecord.getRevision();
 			}
-			// 从文件读取ValueRecord
-			ValueRecord valueRecord = dropTransfer.readValueRecord(valueRecordPos);
 			DocObject docObj = null;
-			if (!valueRecord.isDeleted()) {// 数据存在
-				byte[] values = valueRecord.getValue();
-				String valueStr = new String(values, JueConstant.CHARSET);
-				docObj = new DocObject(valueStr);
-			}
-			if (isLastValue) {// 最新版本的数据
+			if (isLastValue) {// 最新数据，所以直接通过KeyRecord判断当前数据状态
+				if (!keyRecord.isDeleted()) {
+					docObj = readDocObj(valueRecordPos);
+				}
+				// 最新版本的数据，放入缓存
 				cacheObj = new CacheObject(lastRevision, docObj);
 				cache.put(key, cacheObj);
+			} else {
+				docObj = readDocObj(valueRecordPos);
 			}
 			return docObj;
 		} catch (Exception e) {
@@ -507,6 +506,24 @@ public class Jue {
 		}
 	}
 	
+	/**
+	 * 读取文档对象
+	 * @param valuePos
+	 * @return
+	 * @throws IOException
+	 * @throws ChecksumException
+	 */
+	private DocObject readDocObj(long valuePos) throws IOException, ChecksumException {
+		// 从文件读取ValueRecord
+		ValueRecord valueRecord = dropTransfer.readValueRecord(valuePos);
+		if (!valueRecord.isDeleted()) {// 数据存在
+			byte[] values = valueRecord.getValue();
+			String valueStr = new String(values, JueConstant.CHARSET);
+			DocObject docObj = new DocObject(valueStr);
+			return docObj;
+		}
+		return null;
+	}
 	/**
 	 * 删除key对应文档对象
 	 * @param key
