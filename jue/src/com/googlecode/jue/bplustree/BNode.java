@@ -113,6 +113,10 @@ public class BNode<K extends Comparable<K>, V extends Serializable> implements C
 		this.innerNodes[i] = innerNode;
 	}
 
+	public int getCount() {
+		return count;
+	}
+
 	/**
 	* 添加关键字
 	* @param key

@@ -122,14 +122,14 @@ public class KeyTreeCallBack implements TreeCallBack<String, Long> {
 		}
 		// 添加子树或者键记录的地址
 		if (isLeaf) {
-			for (int i = 0; i < innerNodes.length; ++i) {
+			for (int i = 0; i < bNode.getCount(); ++i) {
 				BNode<String, Long>.InnerNode innerNode = innerNodes[i];
 				long recordAddr = innerNode.getValue();
 				array.add(ByteUtil.long2byte(recordAddr));
 			}
 		} else {
 			BNode<String, Long>[] childNodes = bNode.getChildNodes();
-			for (int i = 0; i < childNodes.length; ++i) {
+			for (int i = 0; i < bNode.getCount() + 1; ++i) {
 				BNode<String, Long> childNode = childNodes[i];
 				long childPos = childNode.getPosition();
 				array.add(ByteUtil.long2byte(childPos));
