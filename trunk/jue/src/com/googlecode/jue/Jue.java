@@ -256,15 +256,13 @@ public class Jue {
 			}
 			writeLock.lock();
 			int rev = 0;
+			int currentRev = getCurrentRev(key);
 			if (requireRev >= 0) {
-				int currentRev = getCurrentRev(key);
-				if (currentRev >= 0) {
-					if (currentRev != requireRev) {
-						throw new RevisionInvalidException();
-					}
-					rev = currentRev + 1;
+				if (currentRev != requireRev) {
+					throw new RevisionInvalidException();
 				}
 			}
+			rev = currentRev + 1;
 			return putImpl(key, keyBytes, docObj, false, rev);
 		} catch (Exception e) {
 			throw new RuntimeException(e);
@@ -454,6 +452,8 @@ public class Jue {
 				if (cacheObj.currentRev == requireRev) {// 版本符合
 					return cacheObj.docObj;
 				}
+			} else {
+				return cacheObj.docObj;
 			}
 		}
 		// 从文件中读取

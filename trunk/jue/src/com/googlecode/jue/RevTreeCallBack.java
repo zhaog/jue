@@ -112,14 +112,14 @@ public class RevTreeCallBack implements TreeCallBack<Integer, Long> {
 		}
 		// 添加子树或者键记录的地址
 		if (isLeaf) {
-			for (int i = 0; i < innerNodes.length; ++i) {
+			for (int i = 0; i < bNode.getCount(); ++i) {
 				BNode<Integer, Long>.InnerNode innerNode = innerNodes[i];
 				long recordPos = innerNode.getValue();
 				array.add(ByteUtil.long2byte(recordPos));
 			}
 		} else {
 			BNode<Integer, Long>[] childNodes = bNode.getChildNodes();
-			for (int i = 0; i < childNodes.length; ++i) {
+			for (int i = 0; i < bNode.getCount() + 1; ++i) {
 				BNode<Integer, Long> childNode = childNodes[i];
 				long childPos = childNode.getPosition();
 				array.add(ByteUtil.long2byte(childPos));

@@ -3,6 +3,7 @@
  */
 package com.googlecode.jue.test;
 
+import com.googlecode.jue.FileConfig;
 import com.googlecode.jue.Jue;
 import com.googlecode.jue.doc.DocObject;
 
@@ -16,11 +17,21 @@ public class JueTest {
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		Jue jue = new Jue("jueTestFile.jue");
-//		DocObject docObj = new DocObject();
-//		docObj.put("key", true);
-//		jue.putOverWrite("test", docObj, -1);
-		DocObject obj = jue.get("test", 1);
+		FileConfig config = new FileConfig();
+		config.setKeyTreeMin(1);
+		config.setValueRevTreeMin(1);
+		Jue jue = new Jue("jueTestFile.jue", config);
+//		Jue jue = new Jue("jueTestFile.jue");
+//		for (int i = 0; i < 3; ++i) {
+//			DocObject docObj = new DocObject();
+//			docObj.put("key" + i, true);
+//			jue.putOverWrite("test", docObj, -1);
+////			DocObject obj = jue.get("test" + i, -1);
+////			System.out.println(obj);
+//		}
+		DocObject obj = jue.get("test", 0);
+		System.out.println(obj);
+//		DocObject obj = jue.get("test", 1);
 //		int rev = jue.remove("test");
 //		System.out.println(rev);
 	}
