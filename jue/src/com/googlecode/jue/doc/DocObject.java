@@ -913,6 +913,24 @@ public class DocObject {
         return sb.toString();
     }
 
+    public DocObject merge(DocObject otherDoc) {
+    	Iterator<String> it = otherDoc.keys();
+    	while (it.hasNext()) {
+    		String otherKey = it.next();
+    		Object otherValue = otherDoc.get(otherKey);
+    		Object value = this.get(otherKey);
+    		if (value != null 
+    				&& value instanceof DocObject
+    				&& otherValue instanceof DocObject) {
+    			DocObject valueObj = (DocObject) value;
+    			DocObject otherValueObj = (DocObject) otherValue;
+    			this.put(otherKey, valueObj.merge(otherValueObj));
+    		} else {
+    			this.put(otherKey, otherValue);
+    		}
+    	}
+    	return this;
+    };
 
     /**
      * Make a Doc text of an Object value. If the object has an

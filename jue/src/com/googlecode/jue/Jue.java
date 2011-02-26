@@ -242,13 +242,14 @@ public class Jue {
 	}
 	
 	/**
-	 * Put一个Doc对象，覆盖原先数据，如果版本号小于零，那么就忽略该版本要求
+	 * Put一个Doc对象，如果版本号小于零，那么就忽略该版本要求，如果merge为true，则新数据与旧数据合并
 	 * @param key 主键
 	 * @param docObj 文档对象
 	 * @param requireRev 该操作基于的版本号
+	 * @param merge 是否合并旧的值
 	 * @return 返回操作成功后，数据的版本号
 	 */
-	public int putOverWrite(String key, DocObject docObj, int requireRev) {		
+	public int put(String key, DocObject docObj, int requireRev, boolean merge) {		
 		try {
 			byte[] keyBytes = key.getBytes(JueConstant.CHARSET);			
 			if (keyBytes.length > MAX_KEY_LENGTH) {
@@ -263,6 +264,12 @@ public class Jue {
 				}
 			}
 			rev = currentRev + 1;
+			if (merge) {
+				DocObject oldObj = get(key, requireRev);
+				if (oldObj != null) {
+					docObj = oldObj.merge(docObj);
+				}
+			}
 			return putImpl(key, keyBytes, docObj, false, rev);
 		} catch (Exception e) {
 			throw new RuntimeException(e);
@@ -457,6 +464,7 @@ public class Jue {
 			}
 		}
 		// 从文件中读取
+		readLock.lock();
 		try {
 			KeyRecord keyRecord = getKeyRecord(key);
 			if (keyRecord == null) {
@@ -503,6 +511,8 @@ public class Jue {
 			return docObj;
 		} catch (Exception e) {
 			throw new RuntimeException(e);
+		} finally {
+			readLock.unlock();
 		}
 	}
 	
