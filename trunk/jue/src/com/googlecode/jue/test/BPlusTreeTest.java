@@ -3,8 +3,11 @@ package com.googlecode.jue.test;
 import java.io.Serializable;
 import java.util.Random;
 
+import com.googlecode.jue.KeyTreeCallBack;
 import com.googlecode.jue.bplustree.BNode;
+import com.googlecode.jue.bplustree.BPlusTree;
 import com.googlecode.jue.bplustree.CopyOnWriteBPlusTree;
+import com.googlecode.jue.bplustree.TraverseCallBack;
 import com.googlecode.jue.bplustree.TreeCallBack;
 
 
@@ -16,7 +19,7 @@ public class BPlusTreeTest {
 	*/
 	public static void main(String[] args) throws CloneNotSupportedException {
 //		BPlusTree<Integer, String> tree = new BPlusTree<Integer, String>(2);
-		CopyOnWriteBPlusTree<Integer, String> tree = new CopyOnWriteBPlusTree<Integer, String>(2);
+		CopyOnWriteBPlusTree<String, Long> tree = new CopyOnWriteBPlusTree<String, Long>(2);
 		System.out.println(tree);
 		
 //		System.out.println("=====put 1:'1'");
@@ -78,16 +81,16 @@ public class BPlusTreeTest {
 									"\n\trightNode:" + rightNode.toString());
 			}
 		};
-		for (int i = 1; i <= 100; ++i) {
+		for (int i = 1; i <= 20; ++i) {
 //			int j = new Random().nextInt(100);
 			int j = i;
 			System.out.println(">>>>put " + j + ":'" + j + "'");
 //			tree.put(j, j + "", callBack);
-			tree.put(j, j + "");
-			System.out.println(tree);
+			tree.put(j + "", (long) j);
+//			System.out.println(tree);
 		}
 		System.out.println(tree);
-		
+		traverseAllNode(tree);
 //		System.out.println("==========clone");
 //		BPlusTree<Integer, String> newTree = tree.clone();
 //		System.out.println(newTree);
@@ -102,15 +105,15 @@ public class BPlusTreeTest {
 //		System.out.println(tree);
 		
 		
-		System.out.println("=====delete 1~100");
-		for (int i = 100; i > 0; --i) {
-			int j = new Random().nextInt(100);
-			
-			System.out.println(">>>>delete " + j);
-//			tree.delete(j, callBack);
-			tree.delete(j);
-			System.out.println(tree);
-		}
+//		System.out.println("=====delete 1~100");
+//		for (int i = 100; i > 0; --i) {
+//			int j = new Random().nextInt(100);
+//			
+//			System.out.println(">>>>delete " + j);
+////			tree.delete(j, callBack);
+//			tree.delete(j);
+//			System.out.println(tree);
+//		}
 		
 //		System.out.println("=====search 1~10");
 //		for (int i = 1; i <= 10; ++i) {
@@ -144,6 +147,19 @@ public class BPlusTreeTest {
 //		System.out.println(tree.search(6));
 
 //		traverseLeaf(tree);
+	}
+	
+	private static void traverseAllNode(BPlusTree<String, Long> tree) {
+//		tree.traverseAllNodes(new TraverseCallBack<K, V>() {
+//
+//			@Override
+//			public void traverse(BNode<K, V> node) {
+//				System.out.println("*********traverse:" + node);
+//			}
+//		});
+		KeyTreeCallBack callBack = new KeyTreeCallBack(0);
+		tree.traverseAllNodes(callBack);
+		System.out.println(callBack.getBytes().length);
 	}
 	
 	private static <K extends Comparable<K>, V extends Serializable> void traverseLeaf(CopyOnWriteBPlusTree<K, V> tree) {

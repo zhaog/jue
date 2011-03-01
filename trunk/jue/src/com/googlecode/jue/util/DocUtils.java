@@ -55,4 +55,6 @@ public class DocUtils {
 		byte flag = deleted ? ADrop.FALSE_BYTE : ADrop.TRUE_BYTE;
 		return new KeyRecord(flag, keyBytes, revRootNode, rev, lastestValue);
 	}
+	
+	
 }

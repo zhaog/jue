@@ -7,7 +7,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * @author noah
  * 实现Copy-on-write的B+树，支持并发访问
  */
-public class CopyOnWriteBPlusTree<K extends Comparable<K>, V extends Serializable> {
+public class CopyOnWriteBPlusTree<K extends Comparable<K>, V extends Serializable> implements BPlusTree<K, V>{
 	/**
 	* 访问锁
 	*/
@@ -16,14 +16,14 @@ public class CopyOnWriteBPlusTree<K extends Comparable<K>, V extends Serializabl
     /**
      * 实际操作的树对象
      */
-    private volatile BPlusTree<K, V> tree;
+    private volatile DefaultBPlusTree<K, V> tree;
     
     /**
      * 构造一颗空B+树
      * @param m 节点的最小关键字数量
      */
     public CopyOnWriteBPlusTree(int m) {
-    	tree = new BPlusTree<K, V>(m);
+    	tree = new DefaultBPlusTree<K, V>(m);
     }
     
     /**
@@ -79,7 +79,7 @@ public class CopyOnWriteBPlusTree<K extends Comparable<K>, V extends Serializabl
 		final ReentrantLock lock = this.lock;
 		lock.lock();
 		try {
-			BPlusTree<K, V> newTree = createNewTree();
+			DefaultBPlusTree<K, V> newTree = createNewTree();
 			// 在新的树节点上进行操作
 			boolean result = newTree.put(key, value, callback);
 			// 替换原先的树
@@ -94,9 +94,9 @@ public class CopyOnWriteBPlusTree<K extends Comparable<K>, V extends Serializabl
 	* 复制当前树
 	* @return
 	*/
-	private BPlusTree<K, V> createNewTree() {
+	private DefaultBPlusTree<K, V> createNewTree() {
 		try {
-			BPlusTree<K, V> newTree = tree.clone();
+			DefaultBPlusTree<K, V> newTree = tree.clone();
 			return newTree;
 		} catch (CloneNotSupportedException e) {
 			throw new RuntimeException("clone tree failed");
@@ -131,7 +131,7 @@ public class CopyOnWriteBPlusTree<K extends Comparable<K>, V extends Serializabl
 		final ReentrantLock lock = this.lock;
 		lock.lock();
 		try {
-			BPlusTree<K, V> newTree = createNewTree();
+			DefaultBPlusTree<K, V> newTree = createNewTree();
 			// 在新的树节点上进行操作
 			boolean result = newTree.delete(key, callback);
 			// 替换原先的树
@@ -159,5 +159,10 @@ public class CopyOnWriteBPlusTree<K extends Comparable<K>, V extends Serializabl
 	@Override
 	public String toString() {
 		return tree.toString();
+	}
+
+	@Override
+	public void traverseAllNodes(TraverseCallBack<K, V> traverseCallBack) {
+		tree.traverseAllNodes(traverseCallBack);
 	}
 }
