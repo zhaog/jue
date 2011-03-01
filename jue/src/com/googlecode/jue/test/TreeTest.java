@@ -1,17 +1,17 @@
 package com.googlecode.jue.test;
 
-import com.googlecode.jue.bplustree.BPlusTree;
+import com.googlecode.jue.bplustree.DefaultBPlusTree;
 
 import junit.framework.Assert;
 import junit.framework.TestCase;
 
 
 public class TreeTest extends TestCase{
-	private BPlusTree<Integer, String> tree;
+	private DefaultBPlusTree<Integer, String> tree;
 	@Override
 	protected void setUp() throws Exception {
 		super.setUp();
-		tree = new BPlusTree<Integer, String>(4);
+		tree = new DefaultBPlusTree<Integer, String>(4);
 	}
 
 	@Override

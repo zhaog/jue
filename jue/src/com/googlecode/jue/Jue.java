@@ -15,6 +15,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 import com.googlecode.jue.bplustree.BNode;
 import com.googlecode.jue.bplustree.BPlusTree;
 import com.googlecode.jue.bplustree.CopyOnWriteBPlusTree;
+import com.googlecode.jue.bplustree.DefaultBPlusTree;
 import com.googlecode.jue.doc.DocObject;
 import com.googlecode.jue.exception.RevisionInvalidException;
 import com.googlecode.jue.file.ADrop;
@@ -362,13 +363,13 @@ public class Jue {
 		KeyRecord record = getKeyRecord(key);
 		if (record != null) {
 			long revRootNodePos = record.getRevRootNode();
-			BPlusTree<Integer, Long> revTree = new BPlusTree<Integer, Long>(fileHeader.getValueRevTreeMin());
+			DefaultBPlusTree<Integer, Long> revTree = new DefaultBPlusTree<Integer, Long>(fileHeader.getValueRevTreeMin());
 			BNode<Integer, Long> rootNode = createValueRevNode(revRootNodePos, fileHeader.getValueRevTreeMin());
 			revTree.updateNewTree(revTree, rootNode);
 			return revTree;
 		}
 		// 不存在该版本树
-		return new BPlusTree<Integer, Long>(fileHeader.getValueRevTreeMin());
+		return new DefaultBPlusTree<Integer, Long>(fileHeader.getValueRevTreeMin());
 	}
 
 	/**

@@ -6,6 +6,7 @@ package com.googlecode.jue;
 import java.io.UnsupportedEncodingException;
 
 import com.googlecode.jue.bplustree.BNode;
+import com.googlecode.jue.bplustree.TraverseCallBack;
 import com.googlecode.jue.bplustree.TreeCallBack;
 import com.googlecode.jue.file.ADrop;
 import com.googlecode.jue.util.ByteDynamicArray;
@@ -16,7 +17,8 @@ import com.googlecode.jue.util.ByteUtil;
  * @author noah
  *
  */
-public class KeyTreeCallBack implements TreeCallBack<String, Long> {
+public class KeyTreeCallBack implements TreeCallBack<String, Long>, 
+										TraverseCallBack<String, Long> {
 
 	/**
 	 * 将要写入文件的位置
@@ -136,5 +138,13 @@ public class KeyTreeCallBack implements TreeCallBack<String, Long> {
 			}
 		}
 		return array.toByteArray();
+	}
+
+	@Override
+	public void traverse(BNode<String, Long> node) {
+		byte[] b = bNodeToBytes(node);
+		long pos = byteDynamicArray.size() + writePos;
+		byteDynamicArray.add(b);
+		node.setPosition(pos);
 	}
 }

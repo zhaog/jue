@@ -4,16 +4,18 @@
 package com.googlecode.jue;
 
 import com.googlecode.jue.bplustree.BNode;
+import com.googlecode.jue.bplustree.TraverseCallBack;
 import com.googlecode.jue.bplustree.TreeCallBack;
 import com.googlecode.jue.file.ADrop;
 import com.googlecode.jue.util.ByteDynamicArray;
 import com.googlecode.jue.util.ByteUtil;
 
 /**
- * @author Administrator
+ * @author noah
  *
  */
-public class RevTreeCallBack implements TreeCallBack<Integer, Long> {
+public class RevTreeCallBack implements TreeCallBack<Integer, Long>,
+										TraverseCallBack<Integer, Long>{
 
 	/**
 	 * 将要写入文件的位置
@@ -126,5 +128,13 @@ public class RevTreeCallBack implements TreeCallBack<Integer, Long> {
 			}
 		}
 		return array.toByteArray();
+	}
+
+	@Override
+	public void traverse(BNode<Integer, Long> node) {
+		byte[] b = bNodeToBytes(node);
+		long pos = byteDynamicArray.size() + writePos;
+		byteDynamicArray.add(b);
+		node.setPosition(pos);
 	}
 }

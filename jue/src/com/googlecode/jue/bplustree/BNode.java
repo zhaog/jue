@@ -11,7 +11,7 @@ import java.util.Arrays;
  */
 public class BNode<K extends Comparable<K>, V extends Serializable> implements Cloneable {
 	
-	BPlusTree<K, V> tree;
+	DefaultBPlusTree<K, V> tree;
 	
 	/**
 	* 最大键数量
@@ -56,14 +56,14 @@ public class BNode<K extends Comparable<K>, V extends Serializable> implements C
 	/**
 	 * 节点在文件中的位置
 	 */
-	private long position;
+	private transient long position;
 	
 	/**
 	* 最小节点数
 	* @param m
 	*/
 	@SuppressWarnings("unchecked")
-	public BNode(BPlusTree<K, V> tree, int min, boolean leaf) {
+	public BNode(DefaultBPlusTree<K, V> tree, int min, boolean leaf) {
 		super();
 		this.tree = tree;
 		this.min = min;
