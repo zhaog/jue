@@ -1,6 +1,7 @@
 package com.googlecode.jue.bplustree;
 
 import java.io.Serializable;
+import java.lang.reflect.Array;
 
 /**
  * @author Noah
@@ -28,12 +29,12 @@ public class DefaultBPlusTree<K extends Comparable<K>, V extends Serializable> i
 	int treeLevel;
 	
 	/**
-	* 键的总数
+	* 非叶结点中键的总数
 	*/
 	int keySum;
 	
 	/**
-	* 节点总数
+	* 总节点数
 	*/
 	int nodeSum;
 	
@@ -285,6 +286,51 @@ public class DefaultBPlusTree<K extends Comparable<K>, V extends Serializable> i
 		traverseCallBack.traverse(node);
 	}
 
+	@SuppressWarnings("unchecked")
+	@Override
+	public Entry<K, V>[] entryArray() {
+		DefaultEntry<K, V>[] array = (DefaultEntry<K, V>[]) Array.newInstance(DefaultEntry.class, getKeySum());
+		BNode<K, V> node = getFirstLeafNode();
+		int i = 0;
+		do {
+			BNode<K, V>.InnerNode[] iNodes = node.getInnerNodes();
+			for (int j = 0; j < node.getCount(); ++j) {
+				BNode<K, V>.InnerNode iNode = iNodes[j];
+				array[i] = new DefaultEntry<K, V>(iNode.getKey(), iNode.getValue());
+				++i;
+			}
+			node = node.getNextNode();
+		} while (node != null);
+		return array;
+	}
+
+	/**
+	 * Key-Value的Entry对象
+	 * @author noah
+	 *
+	 * @param <K>
+	 * @param <V>
+	 */
+	public static class DefaultEntry<K, V> implements Entry<K, V> {
+
+		private K key;
+
+		private V value;
+
+		public DefaultEntry(K key, V value) {
+			this.key = key;
+			this.value = value;
+		}
+
+		public K getKey() {
+			return key;
+		}
+
+		public V getValue() {
+			return value;
+		}
+	}
+		
 	private class TraverseInfo {
 		/**
 		 * 

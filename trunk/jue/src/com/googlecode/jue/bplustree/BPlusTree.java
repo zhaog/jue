@@ -96,4 +96,32 @@ public interface BPlusTree<K extends Comparable<K>, V extends Serializable> exte
 	 * @param traverseCallBack
 	 */
 	public void traverseAllNodes(TraverseCallBack<K, V> traverseCallBack);
+	
+	/**
+	 * 将Key-Value以数组形式返回
+	 * @return
+	 */
+	public Entry<K, V>[] entryArray();
+	
+	/**
+	 * Key-Value的Entry对象
+	 * @author noah
+	 *
+	 * @param <K>
+	 * @param <V>
+	 */
+	public interface Entry<K,V> {
+		
+		/**
+		 * 返回键
+		 * @return
+		 */
+		K getKey();
+		
+		/**
+		 * 返回值
+		 * @return
+		 */
+		V getValue();
+	}
 }

@@ -149,7 +149,7 @@ public class BlockFileChannel {
 			RandomAccessFile raf = new RandomAccessFile(file, "rw");
 			this.fileChannel = raf.getChannel();
 			
-			File blockchkFile = new File(file.getName() + BLOCK_SUFFIX);
+			File blockchkFile = new File(getChecksumFilename(file.getName()));
 			RandomAccessFile blockchkFileRaf = new RandomAccessFile(blockchkFile, "rw");
 			this.blockChecksumChannel = blockchkFileRaf.getChannel();
 		} catch (FileNotFoundException e) {
@@ -162,6 +162,14 @@ public class BlockFileChannel {
 		if (blockCache) {
 			cache = new ConcurrentLRUCache<Long, ByteBuffer>(MAX_CAPACITY);
 		}
+	}
+
+	public boolean isBlockCache() {
+		return blockCache;
+	}
+
+	public int getBlockSize() {
+		return blockSize;
 	}
 
 	/**
@@ -482,5 +490,14 @@ public class BlockFileChannel {
 			indexes[i] = startBlockIndex;
 		}
 		return indexes;
+	}
+	
+	/**
+	 * 获取校验和文件名
+	 * @param fileName
+	 * @return
+	 */
+	public static String getChecksumFilename(String fileName) {
+		return fileName + BLOCK_SUFFIX;
 	}
 }
