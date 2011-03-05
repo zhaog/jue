@@ -46,6 +46,11 @@ public class Jue {
 	public static final int MAX_KEY_LENGTH = 1 << 16;
 	
 	/**
+	 * compact操作的缓存大小，64MB
+	 */
+	public static final int COMPACT_BUFFER_SIZE = 1 << 26;
+	
+	/**
 	 * 文件锁
 	 */
 	private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
@@ -84,6 +89,9 @@ public class Jue {
 	
 	private BlockFileChannel blockFileChannel;
 	
+	private File file;
+	
+	private boolean closed;
 	/**
 	 * 打开或者创建Jue
 	 * @param filePath
@@ -98,7 +106,16 @@ public class Jue {
 	 * @param config
 	 */
 	public Jue(String filePath, FileConfig config) {
-		File file = new File(filePath);
+		init(filePath, config);
+	}
+
+	/**
+	 * 初始化
+	 * @param filePath
+	 * @param config
+	 */
+	private void init(String filePath, FileConfig config) {
+		file = new File(filePath);
 		boolean exist = file.exists();
 		try {
 			int keyTreeMin = 0;
@@ -115,6 +132,7 @@ public class Jue {
 			}
 			keyTreeMin = fileHeader.getKeyTreeMin();
 			initTree(keyTreeMin, rootNodePos);
+			closed = true;
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}		
@@ -363,15 +381,26 @@ public class Jue {
 		KeyRecord record = getKeyRecord(key);
 		if (record != null) {
 			long revRootNodePos = record.getRevRootNode();
-			DefaultBPlusTree<Integer, Long> revTree = new DefaultBPlusTree<Integer, Long>(fileHeader.getValueRevTreeMin());
-			BNode<Integer, Long> rootNode = createValueRevNode(revRootNodePos, fileHeader.getValueRevTreeMin());
-			revTree.updateNewTree(revTree, rootNode);
-			return revTree;
+			return getRevTree(revRootNodePos);
 		}
 		// 不存在该版本树
 		return new DefaultBPlusTree<Integer, Long>(fileHeader.getValueRevTreeMin());
 	}
 
+	/**
+	 * 获取Value版本树
+	 * @param revRootNodePos
+	 * @return
+	 * @throws IOException
+	 * @throws ChecksumException
+	 */
+	private BPlusTree<Integer, Long> getRevTree(long revRootNodePos) throws IOException, ChecksumException {
+		DefaultBPlusTree<Integer, Long> revTree = new DefaultBPlusTree<Integer, Long>(fileHeader.getValueRevTreeMin());
+		BNode<Integer, Long> rootNode = createValueRevNode(revRootNodePos, fileHeader.getValueRevTreeMin());
+		revTree.updateNewTree(revTree, rootNode);
+		return revTree;
+	}
+	
 	/**
 	 * 读取文件，创建节点以及遍历创建子节点
 	 * @param nodePos
@@ -556,6 +585,191 @@ public class Jue {
 		}		
 	}
 	
+	/**
+	 * 压缩文件，删除多余的数据和旧版本的数据，假设lastRev=2
+	 * 那么，保留每个key对于的value的，最近的2个版本
+	 * @param lastRev 需要保留的最近的版本项数
+	 */
+	public void compact(int lastRev) {
+		// 创建新文件
+		try {
+			lock();
+			FileConfig config = new FileConfig();
+			config.setBlockCache(blockFileChannel.isBlockCache());
+			config.setBlockSize(blockFileChannel.getBlockSize());
+			config.setCompressionType(fileHeader.getCompressionCodec());
+			config.setKeyTreeMin(fileHeader.getKeyTreeMin());
+			config.setValueCompressed(fileHeader.getValueCompressed() == FileHeader.TRUE_BYTE);
+			config.setValueRevTreeMin(fileHeader.getValueRevTreeMin());
+			
+			
+			String fileName = file.getName() + ".cmp";
+			File compactFile = new File(fileName);
+			BlockFileChannel compactBlockChannel = new BlockFileChannel(compactFile, config.getBlockSize(), config.isBlockCache(), new CRC32ChecksumGenerator());
+			DropTransfer compactDropTransfer = new DropTransfer(compactBlockChannel);
+			
+			FileHeader compactHeader = new FileHeader();
+			compactHeader.setFileTail(-1);
+			compactHeader.setKeyTreeMin(config.getKeyTreeMin());
+			byte valueCompressed = ADrop.FALSE_BYTE;
+			byte compressionCodec = FileConfig.NOT_COMPRESSED;
+			if (config.isValueCompressed()) {
+				valueCompressed = ADrop.TRUE_BYTE;
+				compressionCodec = (byte) config.getCompressionType();
+			}
+			compactHeader.setValueCompressed(valueCompressed);
+			compactHeader.setCompressionCodec(compressionCodec);
+			compactHeader.setValueRevTreeMin(config.getValueRevTreeMin());
+			compactHeader.setBlockSize(config.getBlockSize());
+			ByteBuffer buffer = compactDropTransfer.headerToByteBuffer(compactHeader);
+			compactBlockChannel.write(buffer, 0);
+			
+			// 写入位置
+			long realWritePos = FileHeader.HEADER_LENGHT;
+			// 文件元素的写入位置
+			long dropWritePos = FileHeader.HEADER_LENGHT;
+			BPlusTree<String, Long> compactKeyTree = new DefaultBPlusTree<String, Long>(keyTree.getM());
+			ByteDynamicArray dataArray = new ByteDynamicArray();
+			BPlusTree.Entry<String, Long>[] enties = keyTree.entryArray();
+			for (int i = 0; i < enties.length; ++i) {
+				BPlusTree.Entry<String, Long> entry = enties[i];
+				String key = entry.getKey();
+				long keyRecPos = entry.getValue();
+				// 获取KeyRecord
+				KeyRecord keyRec = dropTransfer.readKeyRecord(keyRecPos);
+				long revRootNodePos = keyRec.getRevRootNode();
+				BPlusTree<Integer, Long> revTree = getRevTree(revRootNodePos);
+				// 处理Value
+				BPlusTree.Entry<Integer,Long>[] revisions = revTree.entryArray();
+				int revs = revisions.length;
+				if (lastRev > 0) {
+					revs = lastRev;
+				}
+				
+				BPlusTree<Integer, Long> compactRevTree = new DefaultBPlusTree<Integer, Long>(revTree.getM());
+				long compactLastestValue = -1;
+				for (int j = revisions.length - 1; j >= 0 && revs > 0; --j, --revs) {
+					BPlusTree.Entry<Integer,Long> revEntry = revisions[j];
+					int revision = revEntry.getKey();
+					long valuePos = revEntry.getValue();
+					ValueRecord valueRecord = compactDropTransfer.readValueRecord(valuePos);
+					byte[] valueRecBytes = compactDropTransfer.valueRecordToByteBuffer(valueRecord).array();
+					long compactValuePos = dropWritePos;
+					// 保存最新版本的数据地址
+					if (j == revisions.length - 1) {
+						compactLastestValue = dropWritePos;
+					}
+					dataArray.add(valueRecBytes);
+					compactRevTree.put(revision, compactValuePos);
+					dropWritePos += valueRecBytes.length;
+				}
+				RevTreeCallBack revTreeCallBack = new RevTreeCallBack(dropWritePos);
+				compactRevTree.traverseAllNodes(revTreeCallBack);
+				byte[] revTreeBytes = revTreeCallBack.getBytes();
+				long compactRevTreePos = dropWritePos;
+				dataArray.add(revTreeBytes);
+				dropWritePos += revTreeBytes.length;
+				// 达到缓存大小，写入文件
+				if (dataArray.size() >= COMPACT_BUFFER_SIZE) {
+					compactBlockChannel.write(ByteBuffer.wrap(dataArray.toByteArray()), realWritePos);
+					realWritePos += dataArray.size();
+					// 重置数据数组
+					dataArray = new ByteDynamicArray();
+				}
+				KeyRecord compactKeyRecord = new KeyRecord(keyRec.getFlag(), keyRec.getKey(), compactRevTreePos, keyRec.getRevision(), compactLastestValue);
+				byte[] compactcompactKeyRecordBytes = compactDropTransfer.keyRecordToByteBuffer(compactKeyRecord).array();
+				long compactKeyRecordPos = dropWritePos;
+				dataArray.add(compactcompactKeyRecordBytes);
+				compactKeyTree.put(key, compactKeyRecordPos);
+				dropWritePos += compactcompactKeyRecordBytes.length;
+			}
+			
+			KeyTreeCallBack keyTreeCallBack = new KeyTreeCallBack(dropWritePos);
+			compactKeyTree.traverseAllNodes(keyTreeCallBack);
+			byte[] keyTreeBytes = keyTreeCallBack.getBytes();
+			long compactKeyTreePos = dropWritePos;
+			dataArray.add(keyTreeBytes);
+			dropWritePos += keyTreeBytes.length;
+			
+			FileTail compactFileTail = new FileTail(fileTail.getRevision(), compactKeyTreePos, 
+													fileTail.getAvgKeyLen(), fileTail.getAvgValueLen(), fileTail.getEntryCount());
+			byte[] compactFileTailBytes = compactDropTransfer.tailToByteBuffer(compactFileTail).array();
+			long compactFileTailPos = dropWritePos;
+			dataArray.add(compactFileTailBytes);
+			dropWritePos += compactFileTailBytes.length;
+			compactBlockChannel.write(ByteBuffer.wrap(dataArray.toByteArray()), realWritePos);
+			realWritePos += dataArray.size();
+
+			compactHeader.setFileTail(compactFileTailPos);
+			ByteBuffer compactHeaderbuffer = compactDropTransfer.headerToByteBuffer(compactHeader);
+			compactBlockChannel.write(compactHeaderbuffer, 0);
+			// 写入完毕，关闭文件
+			close();
+			// 删除原文件，修改新文件名
+			File oldChksumFile = new File(BlockFileChannel.getChecksumFilename(file.getName()));
+			file.delete();
+			oldChksumFile.delete();
+			File compactChksumFile = new File(BlockFileChannel.getChecksumFilename(compactFile.getName()));
+			compactFile.renameTo(file);
+			compactChksumFile.renameTo(oldChksumFile);
+			// 重新初始化，打开文件
+			init(compactFile.getCanonicalPath(), config);
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		} finally {
+			unlock();
+		}		
+	}
+	
+	/**
+	 * 文件是否关闭
+	 * @return
+	 */
+	public boolean isClosed() {
+		lock();
+		try {
+			return closed;
+		} finally {
+			unlock();
+		}
+	}
+
+	/**
+	 * 关闭文件
+	 */
+	public void close() {
+		lock();
+		try {
+			keyTree = null;
+			file = null;
+			fileHeader = null;
+			fileTail = null;
+			dropTransfer = null;
+			blockFileChannel.close();
+			blockFileChannel = null;
+			cache.clear();
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		} finally {
+			unlock();
+		}		
+	}
+	
+	/**
+	 * 获取读写锁
+	 */
+	private void lock() {
+		readLock.lock();
+		writeLock.lock();
+	}
+	
+	/**
+	 * 解锁
+	 */
+	private void unlock() {
+		writeLock.unlock();
+		readLock.unlock();
+	}
 	
 	/**
 	 * 缓存对象

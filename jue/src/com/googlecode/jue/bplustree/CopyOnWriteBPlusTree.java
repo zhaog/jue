@@ -165,4 +165,9 @@ public class CopyOnWriteBPlusTree<K extends Comparable<K>, V extends Serializabl
 	public void traverseAllNodes(TraverseCallBack<K, V> traverseCallBack) {
 		tree.traverseAllNodes(traverseCallBack);
 	}
+
+	@Override
+	public Entry<K, V>[] entryArray() {
+		return tree.entryArray();
+	}
 }
