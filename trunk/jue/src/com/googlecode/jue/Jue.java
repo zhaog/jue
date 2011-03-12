@@ -132,7 +132,7 @@ public class Jue {
 			}
 			keyTreeMin = fileHeader.getKeyTreeMin();
 			initTree(keyTreeMin, rootNodePos);
-			closed = true;
+			closed = false;
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}		
@@ -652,8 +652,8 @@ public class Jue {
 					BPlusTree.Entry<Integer,Long> revEntry = revisions[j];
 					int revision = revEntry.getKey();
 					long valuePos = revEntry.getValue();
-					ValueRecord valueRecord = compactDropTransfer.readValueRecord(valuePos);
-					byte[] valueRecBytes = compactDropTransfer.valueRecordToByteBuffer(valueRecord).array();
+					ValueRecord valueRecord = dropTransfer.readValueRecord(valuePos);
+					byte[] valueRecBytes = dropTransfer.valueRecordToByteBuffer(valueRecord).array();
 					long compactValuePos = dropWritePos;
 					// 保存最新版本的数据地址
 					if (j == revisions.length - 1) {
@@ -666,7 +666,7 @@ public class Jue {
 				RevTreeCallBack revTreeCallBack = new RevTreeCallBack(dropWritePos);
 				compactRevTree.traverseAllNodes(revTreeCallBack);
 				byte[] revTreeBytes = revTreeCallBack.getBytes();
-				long compactRevTreePos = dropWritePos;
+				long compactRevTreePos = compactRevTree.getRootNode().getPosition();
 				dataArray.add(revTreeBytes);
 				dropWritePos += revTreeBytes.length;
 				// 达到缓存大小，写入文件
@@ -677,17 +677,17 @@ public class Jue {
 					dataArray = new ByteDynamicArray();
 				}
 				KeyRecord compactKeyRecord = new KeyRecord(keyRec.getFlag(), keyRec.getKey(), compactRevTreePos, keyRec.getRevision(), compactLastestValue);
-				byte[] compactcompactKeyRecordBytes = compactDropTransfer.keyRecordToByteBuffer(compactKeyRecord).array();
+				byte[] compactKeyRecordBytes = compactDropTransfer.keyRecordToByteBuffer(compactKeyRecord).array();
 				long compactKeyRecordPos = dropWritePos;
-				dataArray.add(compactcompactKeyRecordBytes);
+				dataArray.add(compactKeyRecordBytes);
 				compactKeyTree.put(key, compactKeyRecordPos);
-				dropWritePos += compactcompactKeyRecordBytes.length;
+				dropWritePos += compactKeyRecordBytes.length;
 			}
 			
 			KeyTreeCallBack keyTreeCallBack = new KeyTreeCallBack(dropWritePos);
 			compactKeyTree.traverseAllNodes(keyTreeCallBack);
 			byte[] keyTreeBytes = keyTreeCallBack.getBytes();
-			long compactKeyTreePos = dropWritePos;
+			long compactKeyTreePos = compactKeyTree.getRootNode().getPosition();
 			dataArray.add(keyTreeBytes);
 			dropWritePos += keyTreeBytes.length;
 			
@@ -703,17 +703,18 @@ public class Jue {
 			compactHeader.setFileTail(compactFileTailPos);
 			ByteBuffer compactHeaderbuffer = compactDropTransfer.headerToByteBuffer(compactHeader);
 			compactBlockChannel.write(compactHeaderbuffer, 0);
+			File oldFile = file;
 			// 写入完毕，关闭文件
 			close();
 			// 删除原文件，修改新文件名
-			File oldChksumFile = new File(BlockFileChannel.getChecksumFilename(file.getName()));
-			file.delete();
+			File oldChksumFile = new File(BlockFileChannel.getChecksumFilename(oldFile.getName()));
+			oldFile.delete();
 			oldChksumFile.delete();
 			File compactChksumFile = new File(BlockFileChannel.getChecksumFilename(compactFile.getName()));
-			compactFile.renameTo(file);
+			compactFile.renameTo(oldFile);
 			compactChksumFile.renameTo(oldChksumFile);
 			// 重新初始化，打开文件
-			init(compactFile.getCanonicalPath(), config);
+			init(oldFile.getCanonicalPath(), config);
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		} finally {
@@ -748,6 +749,7 @@ public class Jue {
 			blockFileChannel.close();
 			blockFileChannel = null;
 			cache.clear();
+			closed = false;
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		} finally {
@@ -759,7 +761,6 @@ public class Jue {
 	 * 获取读写锁
 	 */
 	private void lock() {
-		readLock.lock();
 		writeLock.lock();
 	}
 	
@@ -768,7 +769,6 @@ public class Jue {
 	 */
 	private void unlock() {
 		writeLock.unlock();
-		readLock.unlock();
 	}
 	
 	/**

@@ -24,6 +24,7 @@ public class JueTest {
 		Jue jue = new Jue("jueTestFile.jue");
 //		testMerge(jue);
 		testGet(jue);
+//		testCompact(jue);
 //		for (int i = 0; i < 3; ++i) {
 //			DocObject docObj = new DocObject();
 //			docObj.put("key" + i, true);
@@ -47,6 +48,10 @@ public class JueTest {
 		DocObject docObj = new DocObject();
 		docObj.put("nkey", true);
 		jue.put("test", docObj, -1, true);
+	}
+	
+	private static void testCompact(Jue jue) {
+		jue.compact(-1);
 	}
 
 }

@@ -109,9 +109,9 @@ public class KeyTreeCallBack implements TreeCallBack<String, Long>,
 		array.add(isLeaf ? ADrop.TRUE_BYTE : ADrop.FALSE_BYTE);
 		BNode<String, Long>.InnerNode[] innerNodes = bNode.getInnerNodes();
 		// 关键字的数量
-		array.add(ByteUtil.int2byte(innerNodes.length));
+		array.add(ByteUtil.int2byte(bNode.getCount()));
 		try {
-			for (int i = 0; i < innerNodes.length; ++i) {
+			for (int i = 0; i < bNode.getCount(); ++i) {
 				BNode<String, Long>.InnerNode innerNode = innerNodes[i];
 				byte[] key = innerNode.getKey().getBytes(JueConstant.CHARSET);
 				// 键的长度
