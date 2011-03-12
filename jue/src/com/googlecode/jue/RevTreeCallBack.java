@@ -105,8 +105,8 @@ public class RevTreeCallBack implements TreeCallBack<Integer, Long>,
 		array.add(isLeaf ? ADrop.TRUE_BYTE : ADrop.FALSE_BYTE);
 		BNode<Integer, Long>.InnerNode[] innerNodes = bNode.getInnerNodes();
 		// 关键字的数量
-		array.add(ByteUtil.int2byte(innerNodes.length));
-		for (int i = 0; i < innerNodes.length; ++i) {
+		array.add(ByteUtil.int2byte(bNode.getCount()));
+		for (int i = 0; i < bNode.getCount(); ++i) {
 			BNode<Integer, Long>.InnerNode innerNode = innerNodes[i];
 			int key = innerNode.getKey();
 			// 版本号
